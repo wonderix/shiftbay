@@ -76,7 +76,11 @@ class Setup < ActiveRecord::Migration
           for i in 0...3
             start = Time.local(2014,11,day,i*5+6,0,0)
             Area.all.each do | area |
-              shift = ex.shifts.create :from => start, :to => (start+5*60*60), :working_hours => 5.0, :max_amount => 10, :area => area, :employee_count => 2
+              shift = Shift.create :from => start, :to => (start+5*60*60), :working_hours => 5.0, :area => area
+              staffing = shift.staffings.create :employee_count => 2 , :max_amount => 10, :qualification => ex
+              area.employees.each do | e |
+                staffing.offers.create :amount => 1.0, :employee => e
+              end
             end
           end
         end

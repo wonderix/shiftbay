@@ -39,6 +39,7 @@ end
 class Staffing <ActiveRecord::Base
   belongs_to :shift
   belongs_to :qualification
+  has_many :offers
 end
 
 
@@ -60,6 +61,10 @@ get "/shifts" do
   from = Time.parse(params[:start])
   to = Time.parse(params[:end])
   employees = "Ulrich\nMonika\nJulian\nDaniel\nThorsten"
-  Shift.where(:from => from..to).map{ | shift | { 'title' => "#{shift.area.name}\n#{employees}", 'start' => shift.from, 'end' => shift.to , 'color' => 'red' } }.to_json
+  Shift.where(:from => from..to).includes(:staffings => [:qualification , :offers ]).map do | shift | 
+    ok = true
+    staffing = shift.staffings.map { | staffing |  ok ||= staffing.offers.count >= staffing.employee_count ; "#{staffing.qualification.name}\n  #{staffing.offers.map { | offer |  offer.employee.name }.join("\n  ") }" }.join("\n")
+    { 'title' => "#{shift.area.name}\n#{staffing}", 'start' => shift.from, 'end' => shift.to , 'color' => ( ok ? 'green' : 'red' )}
+  end.to_json
 end
 
