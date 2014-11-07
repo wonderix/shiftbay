@@ -1,0 +1,27 @@
+html
+  head
+    link(rel='stylesheet'  href='/css/shiftbay.css')
+    title= "Shiftbay"
+  body
+    .header
+      table
+        tr
+          td
+            .logo 
+              .title Shiftbay
+              .subtitle 
+          td
+            .status 
+              a(href="/about") About Us
+        tr
+          td(colspan=2)
+            .nav
+              ul
+                li
+                  a.selected(href="/") November
+        tr
+          td
+            .sidebar
+          td
+            .body
+              == yield

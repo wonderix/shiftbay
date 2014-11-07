@@ -1,0 +1,114 @@
+body {
+  font-family : "Arial";
+}
+
+.logo {
+  color : white;
+  background-color : orange;
+  font-weight: bold;
+  width: 200px;
+  height: 70px;
+  padding: 5px;
+}
+
+.status {
+  background-color : gray;
+  color : white;
+  width: 1200px;
+  height: 70px;
+  text-align: right;
+  padding: 5px;
+}
+
+.status a{
+  text-decoration: none;
+  color : white;
+}
+
+.logo .title {
+  font-size: 32pt
+}
+
+.table table {
+	border-style: solid;
+	border-width: 1pt;
+ 	border-collapse:collapse
+}
+
+.table th, .table td {
+  vertical-align: top;
+	text-align: left;
+	border-style: solid;
+	border-width: 1pt;
+ 	padding: 5px;
+}
+
+.form th, .table td {
+  vertical-align: top;
+	text-align: left;
+ 	padding: 5px;
+}
+
+.body {
+ 	padding: 10px;
+  background-color: #F7F7F7;
+  min-height: 700px;
+}
+
+.sidebar {
+ 	padding: 10px;
+  background-color: #F7F7F7;
+  min-height: 700px;
+}
+
+h1 {
+  text-transform: uppercase;
+}
+h2 {
+  text-transform: uppercase;
+}
+
+.action {
+  margin :0 ;
+  height: 20px ;
+}
+
+.nav  {
+    font-size: 12pt;
+  font-weight: bold;
+}
+
+.nav ul {
+    padding: 0px;
+    margin: 0px;
+}
+.nav ul:after {
+    clear: both;
+    content: " ";
+    display: block;
+    font-size: 0;
+    height: 0;
+    visibility: hidden;
+}
+.nav ul,.nav ul li{
+    background-color: lightgray
+}
+
+.nav ul li {
+    list-style: none;
+    float:left;
+}
+.nav ul li a {
+    text-decoration: none;
+    display: block;
+    color: #333;
+    padding: 10px 20px 10px 20px;
+}
+
+.nav ul li a.selected {
+    color: white;
+}
+
+.nav ul li a:hover{
+    color: white;
+}

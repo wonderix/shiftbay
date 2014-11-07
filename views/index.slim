@@ -1,0 +1,17 @@
+link rel="stylesheet" href="css/fullcalendar.min.css"
+script src="lib/jquery.js"
+script src="lib/moment.min.js"
+script src="lib/fullcalendar.js"
+javascript:
+  $(document).ready( function() {
+    $('#calendar').fullCalendar( {
+      header: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'month,agendaWeek,agendaDay'
+      },
+      events:  "#{url('/shifts')}",
+      timeFormat: 'HH:mm'
+    })
+  });
+#calendar
