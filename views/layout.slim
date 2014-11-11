@@ -1,3 +1,4 @@
+- path =  request.env['PATH_INFO']
 html
   head
     link(rel='stylesheet'  href='/css/shiftbay.css')
@@ -13,12 +14,15 @@ html
           td
             .status 
               a(href="/about") About Us
+              .user #{@user ? @user.name : ""}
         tr
           td(colspan=2)
             .nav
               ul
                 li
-                  a.selected(href="/") November
+                  a class="#{path == '/'  ? 'selected' : ''}" href="/" Schichtplan
+                li
+                  a class="#{path == '/assignment' ? 'selected' : ''}" href="/assignment" Einteilung
         tr
           td
             .sidebar

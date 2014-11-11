@@ -2,7 +2,17 @@ link rel="stylesheet" href="css/fullcalendar.min.css"
 script src="lib/jquery.js"
 script src="lib/moment.min.js"
 script src="lib/fullcalendar.js"
+#info
 javascript:
+  function updateInfo(date) {
+      $.ajax({
+        type: "GET",
+        url: "/employee/info?date=" + escape(date), 
+        success: function(data) {
+          $('#info').html(data);
+        }
+      });
+    };
   $(document).ready( function() {
     $('#calendar').fullCalendar( {
       header: {
@@ -10,11 +20,14 @@ javascript:
         center: 'title',
         right: 'month,agendaWeek,agendaDay'
       },
-      events:  "#{url('/shifts')}",
-      timeFormat: 'HH:mm',
       firstDay: 1,
+      events:  "#{url('/assignment/shifts')}",
+      timeFormat: 'HH:mm',
+      viewRender: function(view, element) {
+        updateInfo($('#calendar').fullCalendar('getDate'));
+      },
       eventAfterRender: function(event, element) {
-           element.append(event.html);
+          element.append(event.html);
       }
     })
   });

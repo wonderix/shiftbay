@@ -9,9 +9,10 @@ class Setup < ActiveRecord::Migration
       t.string  :password
       t.string  :mobile
       t.integer :role
-      t.integer :notificationType
+      t.integer :notification_type
       t.decimal :working_hours
       t.string  :job_title
+      t.decimal :hourly_wage
       t.belongs_to :area
       t.belongs_to :qualification
    end
@@ -37,8 +38,8 @@ class Setup < ActiveRecord::Migration
       t.string :name
     end
 
-    create_table :offers do |t|
-      t.decimal :amount
+    create_table :assignments do |t|
+      t.decimal :factor
       t.integer :state
       t.belongs_to :staffing
       t.belongs_to :employee
@@ -48,26 +49,27 @@ class Setup < ActiveRecord::Migration
       t.timestamp :from
       t.timestamp :to
       t.decimal :working_hours
-      t.belongs_to :area
     end
 
    create_table :staffings do |t|
       t.timestamp :from
       t.timestamp :to
-      t.decimal :max_amount
+      t.decimal :max_factor
+      t.decimal :current_factor
       t.integer :employee_count
       t.belongs_to :qualification
       t.belongs_to :shift
+      t.belongs_to :area
     end
 
     reversible do |dir|
       dir.up do
         ex = Qualification.create :name => "Examiniert"
-        for i in 1..4
+        for i in 1..2
           Area.create :name => "#{i}. OG"
         end
-        %w(Ulrich Monika).each do | name |
-          e = ex.employees.create :name => name
+        %w(Ulrich Monika Julian Daniel Thorsten).each do | name |
+          e = ex.employees.create :name => name, :hourly_wage => 10.0, :email => "#{name}@web.de"
           Area.all.each do | area |
             e.areas << area
           end
@@ -75,12 +77,12 @@ class Setup < ActiveRecord::Migration
         for day in 1..30
           for i in 0...3
             start = Time.local(2014,11,day,i*5+6,0,0)
+            shift = Shift.create :from => start, :to => (start+5*60*60), :working_hours => 5.0
             Area.all.each do | area |
-              shift = Shift.create :from => start, :to => (start+5*60*60), :working_hours => 5.0, :area => area
-              staffing = shift.staffings.create :employee_count => 2 , :max_amount => 10, :qualification => ex
-              area.employees.each do | e |
-                staffing.offers.create :amount => 1.0, :employee => e
-              end
+              staffing = shift.staffings.create :employee_count => 2 , :max_factor => 1.5, :current_factor => 1.0 , :qualification => ex, :area => area
+              #area.employees.each do | e |
+              #  staffing.assignments.create :factor => 1.0, :employee => e
+              #end
             end
           end
         end
