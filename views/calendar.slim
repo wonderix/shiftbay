@@ -1,0 +1,22 @@
+button onClick="location.href='#{@url}?date=' + escape('#{@calendar.from-7}')" < 
+button onClick="location.href='#{@url}?date=' + escape('#{@calendar.from+7}')" >
+button onClick="location.href='#{@url}?date=' + escape('#{Date.today}')" Heute
+p
+.calendar
+  table
+    tr
+      th
+      - for i in @calendar.days
+        th= "#{i.strftime("%a %d.%m.")}"
+    - for hour in @calendar.hours
+      tr
+        - if hour%2 == 0
+          td.time rowspan=2 #{"%02d" % (hour/2)}:#{"%02d" % (hour%2*30)}
+        - for day in @calendar.days
+          - entry = @calendar.get(day,hour)
+          - next unless entry
+          - if entry.is_a?(String)
+            td= entry
+          - else
+            td.shift rowspan="#{entry.rows}"
+              == @block.call(entry.data)

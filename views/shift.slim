@@ -1,8 +1,9 @@
-.staffing
-  - @shift.staffings.each do |staffing|
-    - klass = staffing.employee_count == 0 ? 'full' : 'open'
-    div class=klass
-      .title #{staffing.area.name} #{staffing.qualification.name}
-      ul
-        - staffing.assignments.each do  |assignment|
-          li= assignment.employee.name
+== calendar(@calendar,"/shift") do |shift|
+  .staffing
+    - shift.staffings.each do |staffing|
+      - klass = staffing.employee_count == 0 ? 'full' : 'open'
+      div class=klass
+        .title #{staffing.area.name} #{staffing.qualification.name}
+        ul
+          - staffing.assignments.each do  |assignment|
+            li= assignment.employee.name

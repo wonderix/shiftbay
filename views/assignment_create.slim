@@ -1,6 +1,0 @@
-- @shift.staffings.each do |staffing|
-  form.action action="/assignment/#{staffing.id}" method = 'POST'
-    input type="hidden" name="_method" value="PUT"
-    = "#{staffing.area.name} (#{staffing.current_factor*@shift.working_hours*@user.hourly_wage}€)"
-    button.action type='submit' 
-      img src="/images/add.png" width=15

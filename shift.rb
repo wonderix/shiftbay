@@ -42,6 +42,7 @@ class Staffing <ActiveRecord::Base
   has_many :assignments
 end
 
+Event = Struct.new("Event",:rows,:data)
 
 class Calendar
   FIRST_DAY = 1
@@ -51,7 +52,7 @@ class Calendar
     from = date  ? Time.parse(date) : Time.now
     from = from.to_date
     @from = from - ( from.wday - FIRST_DAY)
-    @days = @from..(@from+7)
+    @days = @from...(@from+7)
     @hours = 0...48
     @table = []
     for i in @hours
@@ -63,7 +64,7 @@ class Calendar
     column = (from.to_date.wday + 7 - FIRST_DAY) % 7
     row = (from.hour * 60 + from.min) / 30
     rowe =  (to.hour * 60 + to.min) / 30
-    @table[row][column] = entry
+    @table[row][column] = Event.new(rowe-row,entry)
     for i in (row+1)...rowe
       @table[i][column] = nil
     end
@@ -96,6 +97,12 @@ helpers do
     redirect "/login?referrer=#{CGI.escape(env['REQUEST_URI'])}" unless user
     user
   end
+  def calendar(calendar,url,&block)
+  	@calendar = calendar
+  	@url = url
+  	@block = block
+  	slim :calendar, :layout => false
+  end
 end
 
 
@@ -119,56 +126,42 @@ post "/login" do
 end
 
 get "/" do
-  @user = current_user
-  slim :index
+  redirect url("/shift")
 end
 
-get "/shifts" do
+get "/shift" do
   @user = current_user
-  content_type "application/json"
-  from = Time.parse(params[:start])
-  to = Time.parse(params[:end])
-  Shift.where(:from => from..to).includes(:staffings => [:qualification , :assignments, :area ]).order('areas.name').map do | shift | 
-    @shift = shift
-    { 'start' => shift.from, 'end' => shift.to , 'html' => (slim :shift, :layout => false)}
-  end.to_json
-end
-
-get "/shifts2" do
-  @user = current_user
-  
   @calendar = Calendar.new(params[:date])
   Shift.where(:from => @calendar.days).includes(:staffings => [:qualification , :assignments, :area ]).order('areas.name').each do | shift | 
     @calendar.add(shift.from,shift.to,shift)
   end
-  slim :shift2
+  slim :shift
 end
+
+
 
 get "/assignment" do 
   @user = current_user
+  @calendar = Calendar.new(params[:date])
+  @user = current_user
+  ranges = []
+  myshift = 
+  @wage = 0.0
+  @hours = 0.0
+  openshift = Shift.includes(:staffings => [:qualification , :assignments, :area  ]).where(:from => @calendar.days, 'staffings.area_id' => @user.areas,'staffings.qualification_id' => @user.qualification.id).where.not('staffings.employee_count' => 0)
+  @user.assignments.includes(:staffing => [ :shift, :area ]).where('shifts.from' => @calendar.days).each do | assignment |
+    shift = assignment.staffing.shift
+    @calendar.add(shift.from,shift.to,assignment)
+    openshift = openshift.where.not(:from => (shift.from...shift.to))
+    @wage += assignment.factor * @user.hourly_wage * shift.working_hours
+    @hours += shift.working_hours
+  end
+  openshift.each do | shift |
+  	@calendar.add(shift.from,shift.to,shift)
+  end
   slim :assignment
 end
 
-get "/assignment/shifts" do 
-  @user = current_user
-  from = Time.parse(params[:start])
-  to = Time.parse(params[:end])
-  entries = []
-  ranges = []
-  myshift = @user.assignments.includes(:staffing => [ :shift, :area ]).where('shifts.from' => from..to)
-  openshift = Shift.includes(:staffings => [:qualification , :assignments, :area  ]).where(:from => from..to, 'staffings.area_id' => @user.areas,'staffings.qualification_id' => @user.qualification.id).where.not('staffings.employee_count' => 0)
-  myshift.each do | assignment |
-    @assignment = assignment
-    shift = assignment.staffing.shift
-    entries <<  { 'title' => "#{assignment.staffing.area.name}", 'start' => shift.from, 'end' => shift.to ,  'html' => (slim :assignment_delete, :layout => false) }
-    openshift = openshift.where.not(:from => (shift.from...shift.to))
-  end
-  openshift.each do | shift |
-     @shift = shift
-     entries <<  { 'start' => shift.from, 'end' => shift.to , 'color' => '#B40404', 'html' =>  (slim :assignment_create, :layout => false)  }
-  end
-  entries.to_json
-end
 
 
 put "/assignment/:id" do 
@@ -188,16 +181,5 @@ end
 
 
 get "/employee/info" do
-  from = Time.parse(params[:date])
-  from = Time.new(from.year,from.month,1,0,0,0);
-  to = (from.to_date.next_month-1)
-  to = Time.new(to.year,to.month,to.day,23,59,59)
-  @user = current_user
-  @wage = 0.0
-  @hours = 0.0
-  @user.assignments.includes(:staffing => [:shift]).where('shifts.from' => (from...to)).each do | assignment |
-    @wage += assignment.factor * @user.hourly_wage * assignment.staffing.shift.working_hours
-    @hours += assignment.staffing.shift.working_hours
-  end
   slim :employee_info, :layout => false
 end
