@@ -19,15 +19,20 @@ class Calendar
     else
       from = Time.now
     end
-    from = from.to_date
-    from = from - ( from.wday - FIRST_DAY)
-    @from = from.to_time
-    @to   = @from + 7 * SECONDS_PER_DAY
+    @from , @to = Calendar.week(from)
     @hours = 0...ROWS
     @table = []
     for i in @hours
       @table[i] =  [ "","","","","","","" ]
     end
+  end
+  
+  def self.week(t)
+    t0 = t.to_date
+    t0 = t0 - ( t0.wday - FIRST_DAY)
+    t0 = t0.to_time
+    t1 = t0 + 7 * SECONDS_PER_DAY
+    return t0 , t1
   end
   
   def days()

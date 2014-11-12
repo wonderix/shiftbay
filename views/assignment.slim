@@ -1,4 +1,4 @@
-p Übersicht Monat #{@calendar.from.strftime("%m.%Y")} : #{@wage} € / #{@hours} h 
+p #{@calendar.from.strftime("%m.%Y")} : Lohn #{"%.2f" % @wage} € / Stunden #{@hours}
 == calendar(@calendar,"/assignment") do |entry|
   - if entry.is_a?(Shift)
     = "#{entry.from.strftime("%H:%M")} #{entry.title}"
@@ -6,7 +6,7 @@ p Übersicht Monat #{@calendar.from.strftime("%m.%Y")} : #{@wage} € / #{@hours
       - entry.staffings.each do |staffing|
         form.action action="/assignment/#{staffing.id}" method = 'POST'
           input type="hidden" name="_method" value="PUT"
-          = "#{staffing.area.name} (#{staffing.current_factor*entry.working_hours*@user.hourly_wage}€)"
+          = "#{staffing.area.name} (#{"%5.2f" % (staffing.current_factor*entry.working_hours*@user.hourly_wage)}€)"
           button.action type='submit' 
             img src="/images/add.png" width=15
   - else

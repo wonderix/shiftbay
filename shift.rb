@@ -65,11 +65,42 @@ helpers do
     redirect "/login?referrer=#{CGI.escape(env['REQUEST_URI'])}" unless user
     user
   end
+  
   def calendar(calendar,url,&block)
   	@calendar = calendar
   	@url = url
   	@block = block
   	slim :calendar, :layout => false
+  end
+  
+  def adjust_factor(staffing,delta)
+		from, to = Calendar.week(staffing.shift.from)
+		losers = []
+		winners = []
+		Staffing.includes(:shift).where('shifts.from' => from...to, :qualification => staffing.qualification, :area => staffing.area).where.not(:employee_count  => 0).each do | s |
+			w = s.employee_count * s.shift.working_hours
+			if s.shift.from.hour == staffing.shift.from.hour
+				losers << [ s , w ]
+			else
+				winners << [ s , w ]
+			end
+		end
+		sum = 0.0
+		losers.each do | staffing, w |
+			sum += w * delta
+			staffing.current_factor -= w * delta
+			staffing.save
+		end
+		p sum
+		sum_weight = 0.0
+		winners.each do | staffing, w |
+			sum_weight += w
+		end
+		sum /= sum_weight
+		winners.each do | staffing, w |
+			staffing.current_factor += sum * w
+			staffing.save
+		end
   end
 end
 
@@ -141,9 +172,11 @@ end
 put "/assignment/:id" do 
   @user = current_user
   staffing = Staffing.find(params[:id])
+  raise "No more places available" if staffing.employee_count == 0 
   @user.assignments.create(:staffing => staffing,:factor => staffing.current_factor)
-  staffing.employee_count -= 1
+  staffing.employee_count -= 1  
   staffing.save
+  adjust_factor(staffing,0.01)
   redirect request.referrer
 end
 
