@@ -4,6 +4,7 @@ require 'slim'
 require 'sinatra/activerecord'
 require 'time'
 require 'json'
+require_relative 'calendar.rb'
 
 class Employee <ActiveRecord::Base
   has_many :assignments
@@ -42,40 +43,7 @@ class Staffing <ActiveRecord::Base
   has_many :assignments
 end
 
-Event = Struct.new("Event",:rows,:data)
 
-class Calendar
-  FIRST_DAY = 1
-  attr_reader :days, :hours, :from
-
-  def initialize(date)
-    from = date  ? Time.parse(date) : Time.now
-    from = from.to_date
-    @from = from - ( from.wday - FIRST_DAY)
-    @days = @from...(@from+7)
-    @hours = 0...48
-    @table = []
-    for i in @hours
-      @table[i] =  [ "","","","","","","" ]
-    end
-  end
-  
-  def add(from,to,entry)
-    column = (from.to_date.wday + 7 - FIRST_DAY) % 7
-    row = (from.hour * 60 + from.min) / 30
-    rowe =  (to.hour * 60 + to.min) / 30
-    @table[row][column] = Event.new(rowe-row,entry)
-    for i in (row+1)...rowe
-      @table[i][column] = nil
-    end
-  end
-  
-  def get(day,hour)
-    column = day-@from
-    row = hour
-    @table[row][column]
-  end
-end
 
 enable :sessions
 set :bind, '0.0.0.0'
@@ -132,7 +100,7 @@ end
 get "/shift" do
   @user = current_user
   @calendar = Calendar.new(params[:date])
-  Shift.where(:from => @calendar.days).includes(:staffings => [:qualification , :assignments, :area ]).order('areas.name').each do | shift | 
+  Shift.where('"from" <= ? AND "to" >= ?',@calendar.to,@calendar.from).includes(:staffings => [:qualification , :assignments, :area ]).order('areas.name').each do | shift | 
     @calendar.add(shift.from,shift.to,shift)
   end
   slim :shift
@@ -146,18 +114,24 @@ get "/assignment" do
   @user = current_user
   ranges = []
   myshift = 
-  @wage = 0.0
-  @hours = 0.0
-  openshift = Shift.includes(:staffings => [:qualification , :assignments, :area  ]).where(:from => @calendar.days, 'staffings.area_id' => @user.areas,'staffings.qualification_id' => @user.qualification.id).where.not('staffings.employee_count' => 0)
-  @user.assignments.includes(:staffing => [ :shift, :area ]).where('shifts.from' => @calendar.days).each do | assignment |
+  openshift = Shift.includes(:staffings => [:qualification , :assignments, :area  ]).where('"from" <= ? AND "to" >?',@calendar.to,@calendar.from).where('staffings.area_id' => @user.areas,'staffings.qualification_id' => @user.qualification.id).where.not('staffings.employee_count' => 0)
+  @user.assignments.includes(:staffing => [ :shift, :area ]).where('shifts.from'  => (@calendar.from-365*24*60*60)...@calendar.to).where('shifts.to'  => @calendar.from...(@calendar.to+365*24*60*60)).each do | assignment |
     shift = assignment.staffing.shift
     @calendar.add(shift.from,shift.to,assignment)
-    openshift = openshift.where.not(:from => (shift.from...shift.to))
-    @wage += assignment.factor * @user.hourly_wage * shift.working_hours
-    @hours += shift.working_hours
+    openshift = openshift.where.not('"from" < ? AND "to" > ?',shift.to,shift.from)
   end
   openshift.each do | shift |
   	@calendar.add(shift.from,shift.to,shift)
+  end
+  from = @calendar.from.to_date
+  from = from-(from.mday-1)
+  to = from.next_month
+  @wage = 0.0
+  @hours = 0.0
+  @user.assignments.includes(:staffing => [ :shift ]).where('shifts.from'  => from...to).each do | assignment |
+    shift = assignment.staffing.shift
+    @wage += assignment.factor * @user.hourly_wage * shift.working_hours
+    @hours += shift.working_hours
   end
   slim :assignment
 end

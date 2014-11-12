@@ -1,5 +1,6 @@
 == calendar(@calendar,"/shift") do |shift|
   .staffing
+    = "#{shift.from.strftime("%H:%M")} #{shift.title}"
     - shift.staffings.each do |staffing|
       - klass = staffing.employee_count == 0 ? 'full' : 'open'
       div class=klass

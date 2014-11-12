@@ -48,12 +48,13 @@ class Setup < ActiveRecord::Migration
     create_table :shifts do |t|
       t.timestamp :from
       t.timestamp :to
+      t.string  :title
       t.decimal :working_hours
     end
 
-   create_table :staffings do |t|
-      t.timestamp :from
-      t.timestamp :to
+    add_index :shifts, [ :from, :to ]
+    
+    create_table :staffings do |t|
       t.decimal :max_factor
       t.decimal :current_factor
       t.integer :employee_count
@@ -68,23 +69,28 @@ class Setup < ActiveRecord::Migration
         for i in 1..2
           Area.create :name => "#{i}. OG"
         end
+        station = Area.first
         %w(Ulrich Monika Julian Daniel Thorsten).each do | name |
           e = ex.employees.create :name => name, :hourly_wage => 10.0, :email => "#{name}@web.de"
           Area.all.each do | area |
             e.areas << area
           end
         end 
+        title = %w(Frueh Mittag Spaet Nacht)
         for day in 1..30
+          start = Time.local(2014,11,day,7,0,0)
+          factor = (start.sunday? || start.saturday?) ? 1.5 : 1.0
+          
           for i in 0...3
-            start = Time.local(2014,11,day,i*5+6,0,0)
-            shift = Shift.create :from => start, :to => (start+5*60*60), :working_hours => 5.0
+            shift = Shift.create :from => start, :to => (start+5*60*60), :working_hours => 5.0, :title => title[i]
             Area.all.each do | area |
-              staffing = shift.staffings.create :employee_count => 2 , :max_factor => 1.5, :current_factor => 1.0 , :qualification => ex, :area => area
-              #area.employees.each do | e |
-              #  staffing.assignments.create :factor => 1.0, :employee => e
-              #end
+              staffing = shift.staffings.create :employee_count => 2 , :max_factor => factor*1.5, :current_factor => factor , :qualification => ex, :area => area
             end
+            start = shift.to
           end
+          shift = Shift.create :from => start, :to => (start+9*60*60), :working_hours => 9.0, :title => title[3]
+          factor = 1.75
+          staffing = shift.staffings.create :employee_count => 2 , :max_factor => factor*1.5, :current_factor => factor , :qualification => ex, :area => station
         end
       end
     end
