@@ -63,6 +63,7 @@ class Setup < ActiveRecord::Migration
       t.belongs_to :area
     end
 
+
     reversible do |dir|
       dir.up do
         ex = Qualification.create :name => "Examiniert"
