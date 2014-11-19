@@ -1,4 +1,4 @@
-== calendar(@calendar,"/shift") do |shift|
+== calendar(@calendar,url("/shift")) do |shift|
   .staffing
     = "#{shift.from.strftime("%H:%M")} #{shift.title}"
     - shift.staffings.each do |staffing|

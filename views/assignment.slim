@@ -1,21 +1,21 @@
 p Übersicht Monat #{@calendar.from.strftime("%m.%Y")} : #{@wage} € / #{@hours} h 
-== calendar(@calendar,"/assignment") do |entry|
+== calendar(@calendar,url("/assignment")) do |entry|
   - if entry.is_a?(Shift)
     = "#{entry.from.strftime("%H:%M")} #{entry.title}"
     .staffing
       - entry.staffings.each do |staffing|
-        form.action action="/assignment/#{staffing.id}" method = 'POST'
+        form.action action=url("/assignment/#{staffing.id}") method = 'POST'
           input type="hidden" name="_method" value="PUT"
           = "#{staffing.area.name} (#{staffing.current_factor*entry.working_hours*@user.hourly_wage}€)"
           button.action type='submit' 
-            img src="/images/add.png" width=15
+            img src=url("/images/add.png") width=15
   - else
     = "#{entry.staffing.shift.from.strftime("%H:%M")} #{entry.staffing.shift.title}"
     .staffing style="background-color: blue;"
-      form.action action="/assignment/#{entry.id}" method = 'POST'
+      form.action action=url("/assignment/#{entry.id}") method = 'POST'
         = entry.staffing.area.name
         input type="hidden" name="_method" value="DELETE"
         button.action type='submit' 
-          img src="/images/delete.png" width=15
+          img src=url("/images/delete.png") width=15
     
 

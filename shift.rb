@@ -44,16 +44,21 @@ class Staffing <ActiveRecord::Base
 end
 
 
+class ShiftbayApp < Sinatra::Base
 
-enable :sessions
-set :bind, '0.0.0.0'
-set :database, "sqlite3:shift.db"
-set :session_secret, "sRfBLNNJ0F/gaWpmjXasda0WKw5Q="
+  register Sinatra::ActiveRecordExtension
+  
+  ROOT = File.dirname(File.expand_path(__FILE__))
+  DB = "sqlite3:#{ROOT}/shift.db"
+  enable :sessions
+  set :bind, '0.0.0.0'
+  set :database, DB
+  set :session_secret, "sRfBLNNJ0F/gaWpmjXasda0WKw5Q="
 
 
-ActiveRecord::Base.logger.level = 3
-ActiveRecord::Migrator.migrate(File.join(File.dirname(__FILE__),"db/migrate"), nil)
-ActiveRecord::Base.logger = Logger.new(STDOUT)
+# ActiveRecord::Base.logger.level = 3
+# ActiveRecord::Migrator.migrate(File.join(ROOT,"db/migrate"), nil)
+# ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 helpers do
   def current_user()
@@ -62,7 +67,7 @@ helpers do
       user = Employee.find(session[:user])
     rescue => ex
     end
-    redirect "/login?referrer=#{CGI.escape(env['REQUEST_URI'])}" unless user
+    redirect "#{url("/login")}?referrer=#{CGI.escape(env['REQUEST_URI'])}" unless user
     user
   end
   def calendar(calendar,url,&block)
@@ -75,9 +80,15 @@ end
 
 
 get "/login" do
-  @referrer = params[:referrer] || "/"
+  @referrer = params[:referrer] || url("/")
   slim :login
 end
+
+get "/about" do
+  @referrer = params[:referrer] || url("/")
+  slim :about
+end
+
 
 post "/login" do
   @username = params[:username]
@@ -137,6 +148,14 @@ get "/assignment" do
 end
 
 
+post "/assignment/:id" do 
+  @user = current_user
+  staffing = Staffing.find(params[:id])
+  @user.assignments.create(:staffing => staffing,:factor => staffing.current_factor)
+  staffing.employee_count -= 1
+  staffing.save
+  redirect request.referrer
+end
 
 put "/assignment/:id" do 
   @user = current_user
@@ -156,4 +175,6 @@ end
 
 get "/employee/info" do
   slim :employee_info, :layout => false
+end
+
 end
