@@ -1,7 +1,7 @@
 - path =  request.env['PATH_INFO']
 html
   head
-    link(rel='stylesheet'  href='/css/shiftbay.css')
+    link(rel='stylesheet'  href='#{url("/css/shiftbay.css")}')
     title= "Shiftbay"
   body
     .header
@@ -13,16 +13,16 @@ html
               .subtitle 
           td
             .status 
-              a(href="/about") About Us
+              a(href=url("/about")) About Us
               .user #{@user ? @user.name : ""}
         tr
           td(colspan=2)
             .nav
               ul
                 li
-                  a class="#{path == '/shift'  ? 'selected' : ''}" href="/shift" Schichtplan
+                  a class="#{path == '/shift'  ? 'selected' : ''}" href="#{url("/shift")}" Schichtplan
                 li
-                  a class="#{path == '/assignment' ? 'selected' : ''}" href="/assignment" Einteilung
+                  a class="#{path == '/assignment' ? 'selected' : ''}" href="#{url("/assignment")}" Einteilung
         tr
           td
             .sidebar
