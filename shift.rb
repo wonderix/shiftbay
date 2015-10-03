@@ -44,7 +44,6 @@ class Staffing <ActiveRecord::Base
 end
 
 
-class ShiftbayApp < Sinatra::Base
 
   register Sinatra::ActiveRecordExtension
   
@@ -56,9 +55,9 @@ class ShiftbayApp < Sinatra::Base
   set :session_secret, "sRfBLNNJ0F/gaWpmjXasda0WKw5Q="
 
 
-# ActiveRecord::Base.logger.level = 3
-# ActiveRecord::Migrator.migrate(File.join(ROOT,"db/migrate"), nil)
-# ActiveRecord::Base.logger = Logger.new(STDOUT)
+ActiveRecord::Base.logger.level = 3
+ActiveRecord::Migrator.migrate(File.join(ROOT,"db/migrate"), nil)
+ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 helpers do
   def current_user()
@@ -210,4 +209,3 @@ get "/employee/info" do
   slim :employee_info, :layout => false
 end
 
-end
