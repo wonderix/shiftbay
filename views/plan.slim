@@ -1,0 +1,39 @@
+script src="lib/jquery-2.1.4.min.js" 
+button onClick="location.href='/plan?date=' + escape('#{@plan.range.first.next_month}')" <
+button onClick="location.href='/plan?date=' + escape('#{@plan.range.first.prev_month}')" >
+button onClick="location.href='/plan?date=' + escape('#{Date.today}')" Heute
+p
+.plan
+  h2= @plan.range.first
+  table
+    tr
+      - @plan.each_header do |t|
+        -if t
+          th class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
+            a href="#{url("/gnatt")}?date=#{escape(t)}"="#{t.strftime("%d")}"
+        -else
+          th
+    - @plan.each_row do |row|
+      tr
+        - @plan.each_col(row) do |entry,t,user|
+          -case entry
+          -when User
+            td= entry.name
+          -when Shift
+            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
+              input name="test" value=entry.abbrev size=2 onchange="staffing(this,'#{entry.abbrev}','#{t}',#{user.id})"
+          -else
+            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
+              input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{user.id})"
+javascript:
+  function staffing(input,old_value,t,user_id) {
+    var value = input.value;
+    request = $.ajax({
+      url: '#{url("/staffing")}',
+      method: 'POST',
+      data: { value: value, old_value: old_value, date: t, user_id: user_id}
+    });
+    request.fail(function( jqXHR, textStatus ) {
+      input.value = old_value;
+    });
+  }

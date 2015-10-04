@@ -2,15 +2,15 @@
 html
   head
     link(rel='stylesheet'  href='#{url("/css/shiftbay.css")}')
-    title= "Shiftbay"
+    title= "Dienstplaner"
   body
     .header
       table
         tr
           td
             .logo 
-              .title Shiftbay
-              .subtitle 
+              .title Dienst
+              .subtitle Dienstplaner
           td
             .status 
               a(href=url("/about")) About Us
@@ -20,9 +20,9 @@ html
             .nav
               ul
                 li
-                  a class="#{path == '/shift'  ? 'selected' : ''}" href="#{url("/shift")}" Schichtplan
+                  a class="#{path == '/plan'  ? 'selected' : ''}" href="#{url("/plan")}" Schichtplan
                 li
-                  a class="#{path == '/assignment' ? 'selected' : ''}" href="#{url("/assignment")}" Einteilung
+                  a class="#{path == '/gnatt' ? 'selected' : ''}" href="#{url("/gnatt")}" Gnatt
         tr
           td
             .sidebar

@@ -1,8 +1,12 @@
 
 class Setup < ActiveRecord::Migration
+
+  def offset(t)
+    return Time.parse("2000-01-01T"+t) - Time.local(2000,1,1,0,0,0)
+  end
   def change
   
-    create_table :employees do |t|
+    create_table :users do |t|
       t.string  :name
       t.string  :email
       t.string  :phone
@@ -12,25 +16,12 @@ class Setup < ActiveRecord::Migration
       t.integer :notification_type
       t.decimal :working_hours
       t.string  :job_title
-      t.decimal :hourly_wage
-      t.belongs_to :area
+      t.belongs_to :organization
       t.belongs_to :qualification
    end
     
-    create_table :areas_employees do |t|
-      t.belongs_to :employee
-      t.belongs_to :area
-    end
-    
-    create_table :leaves do |t|
-      t.timestamp :from
-      t.timestamp :to
-      t.integer :type
-      t.integer  :state
-      t.belongs_to :employee
-    end
-
-    create_table :areas do |t|
+ 
+    create_table :organizations do |t|
       t.string :name
     end
 
@@ -38,63 +29,46 @@ class Setup < ActiveRecord::Migration
       t.string :name
     end
 
-    create_table :assignments do |t|
-      t.decimal :factor
-      t.integer :state
-      t.belongs_to :staffing
-      t.belongs_to :employee
-   end
-
-    create_table :shifts do |t|
-      t.timestamp :from
-      t.timestamp :to
-      t.string  :title
+   create_table :shifts do |t|
+      t.integer :from1
+      t.integer :to1
+      t.integer :from2
+      t.integer :to2
+      t.string  :name
+      t.string  :abbrev
       t.decimal :working_hours
     end
-
-    add_index :shifts, [ :from, :to ]
     
+    create_index :shifts, :abbrev
+
     create_table :staffings do |t|
-      t.decimal :max_factor
-      t.decimal :current_factor
-      t.integer :employee_count
-      t.belongs_to :qualification
+      t.date       :date
+      t.belongs_to :user
       t.belongs_to :shift
-      t.belongs_to :area
+      t.belongs_to :organization
     end
 
 
     reversible do |dir|
       dir.up do
         ex = Qualification.create :name => "Examiniert"
-        for i in 1..2
-          Area.create :name => "#{i}. OG"
-        end
-        station = Area.first
-        %w(Ulrich Monika Julian Daniel Thorsten).each do | name |
-          e = ex.employees.create :name => name, :hourly_wage => 10.0, :email => "#{name}@web.de"
-          Area.all.each do | area |
-            e.areas << area
-          end
-        end 
-        title = %w(Frueh Mittag Spaet Nacht)
+        orgs = [ "1. OG" , "EG" , "2. OG" , "West" , "3. OG" ].map{ | i |  Organization.create :name => i }
+        users = %w(Ulrich Monika Julian Daniel Thorsten).map{ | name | User.create :name => name, :email => "#{name}@web.de", :qualification => ex, :organization => orgs[rand(5)] }
+        t0 = Time.local(2000,1,1.0,0,0)
+        shifts = []
+        shifts << Shift.create(:name => "Früh",    :abbrev => "F", :working_hours => 6.25, :from1 => offset("6:15"),  :to1 => offset("13:30"))
+        shifts << Shift.create(:name => "Spät",    :abbrev => "S", :working_hours => 6.25, :from1 => offset("13:00"), :to1 => offset("20:00"))
+        shifts << Shift.create(:name => "Geteilt", :abbrev => "G", :working_hours => 6.25, :from1 => offset("6:15"),  :to1 => offset("11:00"), :from2 => offset("16:00") , :to2 => offset("20:00"))
+        shifts << Shift.create(:name => "Nacht",   :abbrev => "N", :working_hours => 12,   :from1 => offset("20:00"), :to1 => offset("6:30")+24*60*60)
         for day in 1..30
-          start = Time.local(2014,11,day,7,0,0)
-          factor = (start.sunday? || start.saturday?) ? 1.5 : 1.0
-          
-          for i in 0...3
-            shift = Shift.create :from => start, :to => (start+5*60*60), :working_hours => 5.0, :title => title[i]
-            Area.all.each do | area |
-              staffing = shift.staffings.create :employee_count => 2 , :max_factor => factor*1.5, :current_factor => factor , :qualification => ex, :area => area
-            end
-            start = shift.to
+          date = Date.new(2015,10,day)
+          users.each do | u |
+            shift = shifts[rand(10)]
+            next unless shift
+            Staffing.create(:date => date, :user=> u , :shift => shift, :organization => orgs[rand(5)])
           end
-          shift = Shift.create :from => start, :to => (start+9*60*60), :working_hours => 9.0, :title => title[3]
-          factor = 1.75
-          staffing = shift.staffings.create :employee_count => 2 , :max_factor => factor*1.5, :current_factor => factor , :qualification => ex, :area => station
         end
       end
     end
   end
-  
 end

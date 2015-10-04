@@ -4,43 +4,35 @@ require 'slim'
 require 'sinatra/activerecord'
 require 'time'
 require 'json'
-require_relative 'calendar.rb'
+require_relative 'gnatt.rb'
+require_relative 'plan.rb'
 
-class Employee <ActiveRecord::Base
+class User <ActiveRecord::Base
   has_many :assignments
   has_many :leaves
   belongs_to :qualification
-  has_and_belongs_to_many :areas
+  belongs_to :organization
 end
 
-class Leave <ActiveRecord::Base
-  belongs_to :employee
-end
 
-class Area <ActiveRecord::Base
-  has_and_belongs_to_many :employees
-  has_many :staffings
+class Organization <ActiveRecord::Base
+  has_many :users
 end
 
 class Qualification <ActiveRecord::Base
-  has_many :employees
+  has_many :users
   has_many :staffings
 end
 
-class Assignment <ActiveRecord::Base
-  belongs_to :employee
-  belongs_to :staffing
-end
 
 class Shift <ActiveRecord::Base
   has_many :staffings
 end
 
 class Staffing <ActiveRecord::Base
-  belongs_to :area
+  belongs_to :organization
   belongs_to :shift
-  belongs_to :qualification
-  has_many :assignments
+  belongs_to :user
 end
 
 
@@ -63,7 +55,7 @@ helpers do
   def current_user()
     user = nil
     begin
-      user = Employee.find(session[:user])
+      user = User.find(session[:user])
     rescue => ex
     end
     redirect "#{url("/login")}?referrer=#{CGI.escape(env['REQUEST_URI'])}" unless user
@@ -81,8 +73,8 @@ helpers do
 		from, to = Calendar.week(staffing.shift.from)
 		losers = []
 		winners = []
-		Staffing.includes(:shift).where('shifts.from' => from...to, :qualification => staffing.qualification, :area => staffing.area).where.not(:employee_count  => 0).each do | s |
-			w = s.employee_count * s.shift.working_hours
+		Staffing.includes(:shift).where('shifts.from' => from...to, :qualification => staffing.qualification, :organization => staffing.organization).where.not(:user_count  => 0).each do | s |
+			w = s.user_count * s.shift.working_hours
 			if s.shift.from.hour == staffing.shift.from.hour
 				losers << [ s , w ]
 			else
@@ -119,12 +111,15 @@ get "/about" do
   slim :about
 end
 
+get "/user/info" do
+  slim :user_info, :layout => false
+end
 
 post "/login" do
   @username = params[:username]
   @password = params[:password]
   begin
-    user  = Employee.where(:email => @username).first
+    user  = User.where(:email => @username).first
     raise "Invalid user #{@username}" unless user
     session[:user] = user.id
     redirect(params[:referrer])
@@ -135,77 +130,51 @@ post "/login" do
 end
 
 get "/" do
-  redirect url("/shift")
+  redirect url("/plan")
 end
 
-get "/shift" do
-  @user = current_user
-  @calendar = Calendar.new(params[:date])
-  Shift.where('"from" <= ? AND "to" >= ?',@calendar.to,@calendar.from).includes(:staffings => [:qualification , :assignments, :area ]).order('areas.name').each do | shift | 
-    @calendar.add(shift.from,shift.to,shift)
+post "/staffing" do 
+  user = User.find(params[:user_id])
+  shift = Shift.find_by(:abbrev => params[:value])
+  date = Date.parse(params[:date])
+  staffing = nil
+  if params[:old_value] == ''
+    shift || raise(ActiveRecord::RecordNotFound)
+    staffing = Staffing.create(:shift => shift, :user => user, :date => date)
+  else   
+    old_shift = Shift.find_by(:abbrev => params[:old_value]) || raise(ActiveRecord::RecordNotFound)
+    staffing = Staffing.find_by(:user => user, :date => date, :shift => old_shift) || raise(ActiveRecord::RecordNotFound)
+    if shift
+      staffing.update(:shift => shift)
+    else
+      staffing.destroy()
+    end
   end
-  slim :shift
+  ""
 end
 
-
-
-get "/assignment" do 
-  @user = current_user
-  @calendar = Calendar.new(params[:date])
-  @user = current_user
-  ranges = []
-  myshift = 
-  openshift = Shift.includes(:staffings => [:qualification , :assignments, :area  ]).where('"from" <= ? AND "to" >?',@calendar.to,@calendar.from).where('staffings.area_id' => @user.areas,'staffings.qualification_id' => @user.qualification.id).where.not('staffings.employee_count' => 0)
-  @user.assignments.includes(:staffing => [ :shift, :area ]).where('shifts.from'  => (@calendar.from-365*24*60*60)...@calendar.to).where('shifts.to'  => @calendar.from...(@calendar.to+365*24*60*60)).each do | assignment |
-    shift = assignment.staffing.shift
-    @calendar.add(shift.from,shift.to,assignment)
-    openshift = openshift.where.not('"from" < ? AND "to" > ?',shift.to,shift.from)
+get "/plan" do
+  @plan = Plan.new(params[:date])
+  Staffing.includes(:user,:shift).where(:date => @plan.range).each do | staffing |
+    @plan.add(staffing.date,staffing.shift,staffing.user)
   end
-  openshift.each do | shift |
-  	@calendar.add(shift.from,shift.to,shift)
+  slim :plan
+end
+
+get "/gnatt" do
+  @gnatt = Gnatt.new(params[:date])
+  Staffing.includes(:user,:shift).where(:date => (@gnatt.date-1)..@gnatt.date).each do | staffing |
+    time = staffing.date.to_time
+    shift = staffing.shift
+    from1 = time + shift.from1
+    to1 = time + shift.to1
+    @gnatt.add(from1,to1,staffing.user.name)
+    if shift.from2
+      from2 = time + shift.from2
+      to2 = time + shift.to2
+      @gnatt.add(from2,to2,staffing.user.name)
+    end
   end
-  from = @calendar.from.to_date
-  from = from-(from.mday-1)
-  to = from.next_month
-  @wage = 0.0
-  @hours = 0.0
-  @user.assignments.includes(:staffing => [ :shift ]).where('shifts.from'  => from...to).each do | assignment |
-    shift = assignment.staffing.shift
-    @wage += assignment.factor * @user.hourly_wage * shift.working_hours
-    @hours += shift.working_hours
-  end
-  slim :assignment
-end
-
-
-post "/assignment/:id" do 
-  @user = current_user
-  staffing = Staffing.find(params[:id])
-  @user.assignments.create(:staffing => staffing,:factor => staffing.current_factor)
-  staffing.employee_count -= 1
-  staffing.save
-  redirect request.referrer
-end
-
-put "/assignment/:id" do 
-  @user = current_user
-  staffing = Staffing.find(params[:id])
-  raise "No more places available" if staffing.employee_count == 0 
-  @user.assignments.create(:staffing => staffing,:factor => staffing.current_factor)
-  staffing.employee_count -= 1  
-  staffing.save
-  adjust_factor(staffing,0.01)
-  redirect request.referrer
-end
-
-delete "/assignment/:id" do 
-  @user = current_user
-  Assignment.find(params[:id]).delete
-  redirect request.referrer
-end
-
-
-get "/employee/info" do
-  slim :employee_info, :layout => false
+  slim :gnatt
 end
 

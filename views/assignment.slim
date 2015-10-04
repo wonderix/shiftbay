@@ -6,14 +6,14 @@ p #{@calendar.from.strftime("%m.%Y")} : Lohn #{"%.2f" % @wage} € / Stunden #{@
       - entry.staffings.each do |staffing|
         form.action action=url("/assignment/#{staffing.id}") method = 'POST'
           input type="hidden" name="_method" value="PUT"
-          = "#{staffing.area.name} (#{"%5.2f" % (staffing.current_factor*entry.working_hours*@user.hourly_wage)}€)"
+          = "#{staffing.organization.name} (#{"%5.2f" % (staffing.current_factor*entry.working_hours*@user.hourly_wage)}€)"
           button.action type='submit' 
             img src=url("/images/add.png") width=15
   - else
     = "#{entry.staffing.shift.from.strftime("%H:%M")} #{entry.staffing.shift.title}"
     .staffing style="background-color: blue;"
       form.action action=url("/assignment/#{entry.id}") method = 'POST'
-        = entry.staffing.area.name
+        = entry.staffing.organization.name
         input type="hidden" name="_method" value="DELETE"
         button.action type='submit' 
           img src=url("/images/delete.png") width=15
