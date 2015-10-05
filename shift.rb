@@ -4,6 +4,7 @@ require 'slim'
 require 'sinatra/activerecord'
 require 'time'
 require 'json'
+require 'pdfkit'
 require_relative 'gnatt.rb'
 require_relative 'plan.rb'
 
@@ -159,6 +160,18 @@ get "/plan" do
     @plan.add(staffing.date,staffing.shift,staffing.user)
   end
   slim :plan
+end
+
+get "/plan.pdf" do
+  @plan = Plan.new(params[:date])
+  Staffing.includes(:user,:shift).where(:date => @plan.range).each do | staffing |
+    @plan.add(staffing.date,staffing.shift,staffing.user)
+  end
+  headers[ 'content-type'] = 'application/pdf'
+  # headers[ 'content-disposition'] = "attachment; filename=plan.pdf"
+  html = slim(:plan, :layout => false)
+  kit = PDFKit.new(html)
+  kit.to_pdf
 end
 
 get "/gnatt" do

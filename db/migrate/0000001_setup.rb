@@ -39,7 +39,7 @@ class Setup < ActiveRecord::Migration
       t.decimal :working_hours
     end
     
-    create_index :shifts, :abbrev
+    add_index :shifts, :abbrev
 
     create_table :staffings do |t|
       t.date       :date
