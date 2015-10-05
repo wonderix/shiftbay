@@ -7,24 +7,23 @@ p
   h2= @plan.range.first
   table
     tr
+      th
       - @plan.each_header do |t|
-        -if t
-          th class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
-            a href="#{url("/gnatt")}?date=#{escape(t)}"="#{t.strftime("%d")}"
-        -else
-          th
+        th class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
+          a href="#{url("/gnatt")}?date=#{escape(t)}"="#{t.strftime("%d")}"
+      th Sum
     - @plan.each_row do |row|
       tr
-        - @plan.each_col(row) do |entry,t,user|
+        td= row.user.name
+        - row.each do |entry,t|
           -case entry
-          -when User
-            td= entry.name
           -when Shift
             td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
-              input name="test" value=entry.abbrev size=2 onchange="staffing(this,'#{entry.abbrev}','#{t}',#{user.id})"
+              input name="test" value=entry.abbrev size=2 onchange="staffing(this,'#{entry.abbrev}','#{t}',#{row.user.id})"
           -else
             td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
-              input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{user.id})"
+              input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id})"
+        td= row.working_hours
 javascript:
   function staffing(input,old_value,t,user_id) {
     var value = input.value;

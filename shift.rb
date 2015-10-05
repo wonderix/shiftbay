@@ -37,6 +37,16 @@ class Staffing <ActiveRecord::Base
 end
 
 
+PDFKit.configure do |config|
+  config.default_options = {
+    :page_size => 'A4',
+    :print_media_type => true
+  }
+  # Use only if your external hostname is unavailable on the server.
+  config.root_url = "http://localhost"
+  config.verbose = true
+end
+
 
   register Sinatra::ActiveRecordExtension
   
@@ -169,8 +179,7 @@ get "/plan.pdf" do
   end
   headers[ 'content-type'] = 'application/pdf'
   # headers[ 'content-disposition'] = "attachment; filename=plan.pdf"
-  html = slim(:plan, :layout => false)
-  kit = PDFKit.new(html)
+  kit = PDFKit.new(slim(:plan, :layout => :layout_pdf))
   kit.to_pdf
 end
 

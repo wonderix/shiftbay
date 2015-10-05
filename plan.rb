@@ -1,6 +1,23 @@
 require 'time'
 
-
+class PlanRow
+  attr_reader :user, :working_hours
+  def initialize(user,range)
+    @user = user
+    @range = range
+    @data = Array.new(range.last-range.first)
+    @working_hours = 0.0
+  end
+  def []=(date,shift)
+    @data[date-@range.first] = shift
+    @working_hours += shift.working_hours
+  end
+  def each(&block)
+    @range.each do |t|
+      block.call(@data[t-@range.first],t)
+    end
+  end
+end
 
 class Plan
   attr_reader :range
@@ -32,7 +49,6 @@ class Plan
   end
   
   def each_header(&block)
-    block.call(nil)
     @range.each do | date |
       block.call(date)
     end
@@ -40,19 +56,12 @@ class Plan
   
   def add(date,shift,user)
     row = @rows[user.id] ||= @table.length
-    col = date - @range.begin
-    @table[row] ||=  [user]
-    @table[row][col+1] = shift
+    @table[row] ||=  PlanRow.new(user,@range)
+    @table[row][date] = shift
   end
   
   def each_row(&block)
     @table.each &block
   end
   
-  def each_col(row,&block)
-    block.call(row[0])
-    @range.each do | date |
-      block.call(row[date-@range.first+1],date,row[0])
-    end
-  end
 end
