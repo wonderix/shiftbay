@@ -1,7 +1,7 @@
 script src="lib/jquery-2.1.4.min.js" 
-button onClick="location.href='/plan?date=' + escape('#{@plan.range.first.next_month}')" <
-button onClick="location.href='/plan?date=' + escape('#{@plan.range.first.prev_month}')" >
-button onClick="location.href='/plan?date=' + escape('#{Date.today}')" Heute
+button.nav onClick="location.href='/plan?date=' + escape('#{@plan.range.first.prev_month}')" <
+button.nav onClick="location.href='/plan?date=' + escape('#{@plan.range.first.next_month}')" >
+button.nav onClick="location.href='/plan?date=' + escape('#{Date.today}')" Heute
 p
 .plan
   h2= @plan.range.first
@@ -24,6 +24,14 @@ p
             td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
               input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id})"
         td= row.working_hours
+    tr
+      td
+    - @plan.each_time_row do |row|
+      tr
+        td #{row.range.first.strftime("%H:%M")}-#{row.range.last.strftime("%H:%M")}
+        - row.each do |entry,t|
+          td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"= entry
+        td
 javascript:
   function staffing(input,old_value,t,user_id) {
     var value = input.value;

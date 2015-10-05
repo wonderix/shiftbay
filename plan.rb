@@ -19,9 +19,30 @@ class PlanRow
   end
 end
 
+
+class ShiftRow
+  attr_reader :range
+  def initialize(range,date_range)
+    @range = range
+    @date_range = date_range
+    @data = Array.new(@date_range.last-@date_range.first)
+  end
+  def add(date)
+    col = date-@date_range.first
+    @data[col] = @data[col].to_i + 1
+  end
+  
+  def each(&block)
+    @date_range.each do |t|
+      block.call(@data[t-@date_range.first],t)
+    end
+  end
+end
+
 class Plan
   attr_reader :range
-
+  TIME_SLOT = 7200
+  TIME_SLOT_RANGE = (6*3600/TIME_SLOT)...(20*3600/TIME_SLOT)
   def initialize(date)
     case date
     when String
@@ -36,6 +57,7 @@ class Plan
     @range = Plan.range(from)
     @table = []
     @rows = {}
+    @time_rows = Array.new(24*3600/TIME_SLOT)
   end
   
   def self.range(t)
@@ -56,12 +78,27 @@ class Plan
   
   def add(date,shift,user)
     row = @rows[user.id] ||= @table.length
-    @table[row] ||=  PlanRow.new(user,@range)
-    @table[row][date] = shift
+    [ [shift.from1,shift.to1 ] , [shift.from2,shift.to2 ] ].each do | from, to |
+      next unless from
+      first = [ from/TIME_SLOT, TIME_SLOT_RANGE.first].max
+      last =  [ to/TIME_SLOT, TIME_SLOT_RANGE.last].min
+      for t in first...last
+        time_row = @time_rows[t] ||= ShiftRow.new((@range.first.to_time+t*TIME_SLOT)...(@range.first.to_time+(t+1)*TIME_SLOT),@range)
+        time_row.add(date)
+      end
+    end
+    row = @table[row] ||=  PlanRow.new(user,@range)
+    row[date] = shift
   end
   
   def each_row(&block)
     @table.each &block
   end
-  
+
+  def each_time_row(&block)
+    @time_rows.each do | k |
+      block.call(k) if k
+    end
+  end
+
 end
