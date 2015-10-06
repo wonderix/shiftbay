@@ -79,7 +79,7 @@ helpers do
       # user = User.find(session[:user])
       user = User.find_by(name: "Ulrich")
     rescue => ex
-    rescue => ex
+      p ex
     end
     redirect "#{url("/login")}?referrer=#{CGI.escape(env['REQUEST_URI'])}" unless user
     user
@@ -137,6 +137,9 @@ helpers do
   end
 end
 
+after do
+  ActiveRecord::Base.connection.close
+end
 
 get "/login" do
   @referrer = params[:referrer] || url("/")

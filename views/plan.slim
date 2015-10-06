@@ -8,11 +8,13 @@ button.nav onClick="location.href='/plan.pdf?date=' + escape('#{date}')" Drucken
 p
 .plan
   h2 #{@range.first}
-  - @plans.each do | plan_entry |
-    - plan = plan_entry.plan
-    - team = plan_entry.team
-    h3 #{team.name} 
-    table
+  table
+    - @plans.each do | plan_entry |
+      - plan = plan_entry.plan
+      - team = plan_entry.team
+      tr
+        td
+          h3 #{team.name} 
       tr
         th
         - plan.each_header do |t|
