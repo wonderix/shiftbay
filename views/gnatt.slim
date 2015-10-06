@@ -1,17 +1,22 @@
-button onClick="location.href='/gnatt?date=' + escape('#{@gnatt.date-7}')" <<
-button onClick="location.href='/gnatt?date=' + escape('#{@gnatt.date-1}')" <
-button onClick="location.href='/gnatt?date=' + escape('#{@gnatt.date+1}')" >
-button onClick="location.href='/gnatt?date=' + escape('#{@gnatt.date+7}')" >>
+- date = @range.first.to_date
+button onClick="location.href='/gnatt?date=' + escape('#{date.prev_week}')" <<
+button onClick="location.href='/gnatt?date=' + escape('#{date.prev_day}')" <
+button onClick="location.href='/gnatt?date=' + escape('#{date.next_day}')" >
+button onClick="location.href='/gnatt?date=' + escape('#{date.next_week}')" >>
 button onClick="location.href='/gnatt?date=' + escape('#{Date.today}')" Heute
 p
 .gnatt
-  h2= @gnatt.date
-  table
-    tr
-      - @gnatt.each_header do |t,span|
-        th colspan="#{span}"= "#{t.strftime("%H:%M")}"
-    - @gnatt.each_row do |row|
+  h2 #{date}
+  - @gnatts.each do | entry |
+    - gnatt = entry.gnatt
+    - team = entry.team
+    h3 #{team.name}
+    table
       tr
-        - @gnatt.each_col(row) do |col,span,entry|
-          td class="#{entry ? "shift" : ""}" colspan="#{span}"
-            = entry.to_s
+        - gnatt.each_header do |t,span|
+          th colspan="#{span}"= "#{t.strftime("%H:%M")}"
+      - gnatt.each_row do |row|
+        tr
+          - gnatt.each_col(row) do |col,span,entry|
+            td class="#{entry ? "shift" : ""}" colspan="#{span}"
+              = entry.to_s

@@ -16,12 +16,17 @@ class Setup < ActiveRecord::Migration
       t.integer :notification_type
       t.decimal :working_hours
       t.string  :job_title
-      t.belongs_to :organization
       t.belongs_to :qualification
    end
     
+    
+    create_table :team_members do |t|
+      t.belongs_to :user, index: true
+      t.belongs_to :team, index: true
+      t.integer    :role
+    end
  
-    create_table :organizations do |t|
+    create_table :teams do |t|
       t.string :name
     end
 
@@ -45,15 +50,21 @@ class Setup < ActiveRecord::Migration
       t.date       :date
       t.belongs_to :user
       t.belongs_to :shift
-      t.belongs_to :organization
+      t.belongs_to :team
     end
 
 
     reversible do |dir|
       dir.up do
         ex = Qualification.create :name => "Examiniert"
-        orgs = [ "1. OG" , "EG" , "2. OG" , "West" , "3. OG" ].map{ | i |  Organization.create :name => i }
-        users = %w(Ulrich Monika Julian Daniel Thorsten).map{ | name | User.create :name => name, :email => "#{name}@web.de", :qualification => ex, :organization => orgs[rand(5)] }
+        teams = [ "1. OG" , "EG" , "2. OG" , "West" , "3. OG" ].map{ | i |  Team.create :name => i }
+        users = %w(Ulrich Monika Julian Daniel Thorsten).map{ | name | User.create :name => name, :email => "#{name}@web.de", :qualification => ex }
+        teams.each do | team |
+          TeamMember.create team: team, user: users[0] , role: TeamMember::OWNER
+        end
+        users[1...-1].each do | user |
+          TeamMember.create team: teams[0], user: user , role: TeamMember::MEMBER
+        end          
         t0 = Time.local(2000,1,1.0,0,0)
         shifts = []
         shifts << Shift.create(:name => "Früh",    :abbrev => "F", :working_hours => 6.25, :from1 => offset("6:15"),  :to1 => offset("13:30"))
@@ -65,7 +76,7 @@ class Setup < ActiveRecord::Migration
           users.each do | u |
             shift = shifts[rand(10)]
             next unless shift
-            Staffing.create(:date => date, :user=> u , :shift => shift, :organization => orgs[rand(5)])
+            Staffing.create(:date => date, :user=> u , :shift => shift, :team => teams[0])
           end
         end
       end

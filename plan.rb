@@ -43,24 +43,24 @@ class Plan
   attr_reader :range
   TIME_SLOT = 7200
   TIME_SLOT_RANGE = (6*3600/TIME_SLOT)...(20*3600/TIME_SLOT)
-  def initialize(date)
-    case date
-    when String
-      from = Date.parse(date)
-    when Time
-      from = date.to_date
-    when Date
-      from = date
-    else
-      from = Date.today
-    end
-    @range = Plan.range(from)
+
+  def initialize(range)
+    @range = range
     @table = []
     @rows = {}
     @time_rows = Array.new(24*3600/TIME_SLOT)
   end
   
-  def self.range(t)
+  
+  def self.range(date)
+    case date
+    when String
+      t = date.to_date
+    when Date
+      t = date
+    else
+      t = Date.today
+    end
     t0 = t.to_date
     t0 = t0 - ( t0.day - 1)
     return t0...t0.next_month
@@ -76,8 +76,13 @@ class Plan
     end
   end
   
+  def add_user(user)
+    index = @rows[user.id] ||= @table.length
+    row = @table[index] ||=  PlanRow.new(user,@range)
+  end
+  
   def add(date,shift,user)
-    row = @rows[user.id] ||= @table.length
+    row = add_user(user)
     [ [shift.from1,shift.to1 ] , [shift.from2,shift.to2 ] ].each do | from, to |
       next unless from
       first = [ from/TIME_SLOT, TIME_SLOT_RANGE.first].max
@@ -87,7 +92,6 @@ class Plan
         time_row.add(date)
       end
     end
-    row = @table[row] ||=  PlanRow.new(user,@range)
     row[date] = shift
   end
   

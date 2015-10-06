@@ -5,29 +5,33 @@ class Gnatt
   COLUMNS = 48
   
 
-  def initialize(date)
-    case date
-    when String
-      @from = Time.parse(date)
-    when Time
-      @from = date
-    else
-      @from = Time.now
-    end
-    @from = Time.local(@from.year,@from.month,@from.day,0,0,0)
+  def initialize(range)
+    @range = range
     @hours = 0...COLUMNS
     @table = []
     @start_col = COLUMNS/2
     @end_col = COLUMNS/2+1
   end
   
+  def Gnatt.range(date)
+    case date
+    when String
+      date = Time.parse(date)
+    when Time
+    else
+      date = Time.now
+    end
+    t0 = Time.local(date.year,date.month,date.day,0,0,0)
+    t0...(t0 + 24*3600)
+  end
+  
   def date()
-    @from.to_date
+    @range.first.to_date
   end
   
   def add(from,to,entry)
-    start_col = ((from - @from )/1800).to_i
-    end_col = ((to - @from +  1799)/1800).to_i
+    start_col = ((from - @range.first )/1800).to_i
+    end_col = ((to - @range.first +  1799)/1800).to_i
     return if ( start_col >= COLUMNS)
     return if ( end_col <= 0)
     end_col = COLUMNS if ( end_col > COLUMNS) 
@@ -49,7 +53,7 @@ class Gnatt
   
   def each_header(&block)
     for col in @start_col...@end_col
-      block.call(@from+col*1800,2) if col %2 == 0
+      block.call(@range.first+col*1800,2) if col %2 == 0
     end
   end
   

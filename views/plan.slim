@@ -1,44 +1,55 @@
 script src="lib/jquery-2.1.4.min.js" 
-button.nav onClick="location.href='/plan?date=' + escape('#{@plan.range.first.prev_month}')" <
-button.nav onClick="location.href='/plan?date=' + escape('#{@plan.range.first.next_month}')" >
+- date = @range.first
+button.nav onClick="location.href='/plan?date=' + escape('#{date.prev_month}')" <
+button.nav onClick="location.href='/plan?date=' + escape('#{date.next_month}')" >
 button.nav onClick="location.href='/plan?date=' + escape('#{Date.today}')" Heute
+button.nav onClick="location.href='/plan.pdf?date=' + escape('#{date}')" Drucken
+
 p
 .plan
-  h2= @plan.range.first
-  table
-    tr
-      th
-      - @plan.each_header do |t|
-        th class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
-          a href="#{url("/gnatt")}?date=#{escape(t)}"="#{t.strftime("%d")}"
-      th Sum
-    - @plan.each_row do |row|
+  h2 #{@range.first}
+  - @plans.each do | plan_entry |
+    - plan = plan_entry.plan
+    - team = plan_entry.team
+    h3 #{team.name} 
+    table
       tr
-        td= row.user.name
-        - row.each do |entry,t|
-          -case entry
-          -when Shift
-            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
-              input name="test" value=entry.abbrev size=2 onchange="staffing(this,'#{entry.abbrev}','#{t}',#{row.user.id})"
-          -else
-            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
-              input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id})"
-        td= row.working_hours
-    tr
-      td
-    - @plan.each_time_row do |row|
+        th
+        - plan.each_header do |t|
+          th class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
+            a href="#{url("/gnatt")}?date=#{escape(t)}"="#{t.strftime("%d")}"
+        th Sum
+      - plan.each_row do |row|
+        tr
+          td= row.user.name
+          - row.each do |entry,t|
+            -case entry
+            -when Shift
+              td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
+                -if plan_entry.writable
+                  input name="test" value=entry.abbrev size=2 onchange="staffing(this,'#{entry.abbrev}','#{t}',#{row.user.id},#{team.id})"
+                -else 
+                  = entry.abbrev
+            -else
+              td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
+                -if plan_entry.writable
+                  input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id},#{team.id})"
+          td= row.working_hours
       tr
-        td #{row.range.first.strftime("%H:%M")}-#{row.range.last.strftime("%H:%M")}
-        - row.each do |entry,t|
-          td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"= entry
         td
+      - plan.each_time_row do |row|
+        tr
+          td #{row.range.first.strftime("%H:%M")}-#{row.range.last.strftime("%H:%M")}
+          - row.each do |entry,t|
+            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"= entry
+          td
 javascript:
-  function staffing(input,old_value,t,user_id) {
+  function staffing(input,old_value,t,user_id,team_id) {
     var value = input.value;
     request = $.ajax({
       url: '#{url("/staffing")}',
       method: 'POST',
-      data: { value: value, old_value: old_value, date: t, user_id: user_id}
+      data: { value: value, old_value: old_value, date: t, user_id: user_id, team_id: team_id}
     });
     request.fail(function( jqXHR, textStatus ) {
       input.value = old_value;

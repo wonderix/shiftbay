@@ -9,15 +9,25 @@ require_relative 'gnatt.rb'
 require_relative 'plan.rb'
 
 class User <ActiveRecord::Base
-  has_many :assignments
-  has_many :leaves
+  has_many   :staffings
+  has_many  :team_members
   belongs_to :qualification
-  belongs_to :organization
+  has_many   :teams, :through => :team_members
 end
 
 
-class Organization <ActiveRecord::Base
-  has_many :users
+class Team <ActiveRecord::Base
+  has_many  :staffings
+  has_many  :team_members
+  has_many  :users, :through => :team_members
+end
+
+class TeamMember < ActiveRecord::Base
+  MEMBER = 1
+  PLANNER = 2
+  OWNER = 3
+  belongs_to :team
+  belongs_to :user
 end
 
 class Qualification <ActiveRecord::Base
@@ -31,7 +41,7 @@ class Shift <ActiveRecord::Base
 end
 
 class Staffing <ActiveRecord::Base
-  belongs_to :organization
+  belongs_to :team
   belongs_to :shift
   belongs_to :user
 end
@@ -66,7 +76,9 @@ helpers do
   def current_user()
     user = nil
     begin
-      user = User.find(session[:user])
+      # user = User.find(session[:user])
+      user = User.find_by(name: "Ulrich")
+    rescue => ex
     rescue => ex
     end
     redirect "#{url("/login")}?referrer=#{CGI.escape(env['REQUEST_URI'])}" unless user
@@ -84,7 +96,7 @@ helpers do
 		from, to = Calendar.week(staffing.shift.from)
 		losers = []
 		winners = []
-		Staffing.includes(:shift).where('shifts.from' => from...to, :qualification => staffing.qualification, :organization => staffing.organization).where.not(:user_count  => 0).each do | s |
+		Staffing.includes(:shift).where('shifts.from' => from...to, :qualification => staffing.qualification, :team => staffing.team).where.not(:user_count  => 0).each do | s |
 			w = s.user_count * s.shift.working_hours
 			if s.shift.from.hour == staffing.shift.from.hour
 				losers << [ s , w ]
@@ -108,6 +120,20 @@ helpers do
 			staffing.current_factor += sum * w
 			staffing.save
 		end
+  end
+  def get_plan(options = {})
+    @user = current_user
+    @plans = []
+    @range = Plan.range(params[:date])
+    @user.team_members().includes(:team).each do | tm |
+      plan = Plan.new(@range)
+      tm.team.users.order(:name).each { | user | plan.add_user(user)}
+      @plans << OpenStruct.new(team: tm.team, plan: plan, writable: true) # (tm.role == TeamMember::OWNER || tm.role == TeamMember::PLANNER))
+      Staffing.includes(:user,:shift).where(date: plan.range, team: tm.team).each do | staffing |
+        plan.add(staffing.date,staffing.shift,staffing.user)
+      end
+    end
+    slim :plan, options
   end
 end
 
@@ -147,14 +173,15 @@ end
 post "/staffing" do 
   user = User.find(params[:user_id])
   shift = Shift.find_by(:abbrev => params[:value])
+  team = Team.find(params[:team_id])
   date = Date.parse(params[:date])
   staffing = nil
   if params[:old_value] == ''
     shift || raise(ActiveRecord::RecordNotFound)
-    staffing = Staffing.create(:shift => shift, :user => user, :date => date)
+    staffing = Staffing.create(:shift => shift, :user => user, :date => date, :team => team)
   else   
     old_shift = Shift.find_by(:abbrev => params[:old_value]) || raise(ActiveRecord::RecordNotFound)
-    staffing = Staffing.find_by(:user => user, :date => date, :shift => old_shift) || raise(ActiveRecord::RecordNotFound)
+    staffing = Staffing.find_by(:user => user, :date => date, :shift => old_shift, :team => team) || raise(ActiveRecord::RecordNotFound)
     if shift
       staffing.update(:shift => shift)
     else
@@ -165,36 +192,35 @@ post "/staffing" do
 end
 
 get "/plan" do
-  @plan = Plan.new(params[:date])
-  Staffing.includes(:user,:shift).where(:date => @plan.range).each do | staffing |
-    @plan.add(staffing.date,staffing.shift,staffing.user)
-  end
-  slim :plan
+  get_plan
 end
 
 get "/plan.pdf" do
-  @plan = Plan.new(params[:date])
-  Staffing.includes(:user,:shift).where(:date => @plan.range).each do | staffing |
-    @plan.add(staffing.date,staffing.shift,staffing.user)
-  end
+  html = get_plan(:layout => :layout_pdf)
   headers[ 'content-type'] = 'application/pdf'
   # headers[ 'content-disposition'] = "attachment; filename=plan.pdf"
-  kit = PDFKit.new(slim(:plan, :layout => :layout_pdf))
+  kit = PDFKit.new(html)
   kit.to_pdf
 end
 
 get "/gnatt" do
-  @gnatt = Gnatt.new(params[:date])
-  Staffing.includes(:user,:shift).where(:date => (@gnatt.date-1)..@gnatt.date).each do | staffing |
-    time = staffing.date.to_time
-    shift = staffing.shift
-    from1 = time + shift.from1
-    to1 = time + shift.to1
-    @gnatt.add(from1,to1,staffing.user.name)
-    if shift.from2
-      from2 = time + shift.from2
-      to2 = time + shift.to2
-      @gnatt.add(from2,to2,staffing.user.name)
+  @user = current_user
+  @gnatts = []
+  @range = Gnatt.range(params[:date])
+  @user.team_members().includes(:team).each do | tm |
+    gnatt = Gnatt.new(@range)
+    @gnatts << OpenStruct.new(:team => tm.team, :gnatt => gnatt)
+    Staffing.includes(:user,:shift).where(:date => (gnatt.date-1)..gnatt.date, :team => tm.team).each do | staffing |
+      time = staffing.date.to_time
+      shift = staffing.shift
+      from1 = time + shift.from1
+      to1 = time + shift.to1
+      gnatt.add(from1,to1,staffing.user.name)
+      if shift.from2
+        from2 = time + shift.from2
+        to2 = time + shift.to2
+        gnatt.add(from2,to2,staffing.user.name)
+      end
     end
   end
   slim :gnatt
