@@ -1,10 +1,13 @@
 html
   head
     css:
-      .nav {
+      #{File.read("public/css/shiftbay.css")}
+      tr.noprint {
         display : none;
       }
-      #{File.read("public/css/shiftbay.css")}
+      tr.print {
+        display : table-row;
+      }
     title= "Dienstplaner"
   body
     == yield

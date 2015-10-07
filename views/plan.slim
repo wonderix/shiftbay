@@ -1,9 +1,9 @@
 script src="lib/jquery-2.1.4.min.js" 
 - date = @range.first
-button.nav onClick="location.href='/plan?date=' + escape('#{date.prev_month}')" <
-button.nav onClick="location.href='/plan?date=' + escape('#{date.next_month}')" >
-button.nav onClick="location.href='/plan?date=' + escape('#{Date.today}')" Heute
-button.nav onClick="location.href='/plan.pdf?date=' + escape('#{date}')" Drucken
+button.nav.noprint onClick="location.href='/plan?date=' + escape('#{date.prev_month}')" <
+button.nav.noprint onClick="location.href='/plan?date=' + escape('#{date.next_month}')" >
+button.nav.noprint onClick="location.href='/plan?date=' + escape('#{Date.today}')" Heute
+button.nav.noprint onClick="location.href='/plan.pdf?date=' + escape('#{date}')" Drucken
 
 p
 .plan
@@ -13,14 +13,15 @@ p
       - plan = plan_entry.plan
       - team = plan_entry.team
       tr
-        td
+        td colspan=3+(@range.last-@range.first)
           h3 #{team.name} 
       tr
         th
         - plan.each_header do |t|
           th class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
             a href="#{url("/gnatt")}?date=#{escape(t)}"="#{t.strftime("%d")}"
-        th Sum
+        th Ist
+        th Soll
       - plan.each_row do |row|
         tr
           td= row.user.name
@@ -37,13 +38,27 @@ p
                 -if plan_entry.writable
                   input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id},#{team.id})"
           td= row.working_hours
+          td= 200
+        tr.print
+          td
+          - row.each do |entry,t|
+            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }" &nbsp;
+          td &nbsp;
+          td &nbsp;
+        tr.print
+          td
+          - row.each do |entry,t|
+            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }" &nbsp;
+          td &nbsp;
+          td &nbsp;
       tr
-        td
+        td colspan=3+(@range.last-@range.first)
       - plan.each_time_row do |row|
-        tr
+        tr.noprint
           td #{row.range.first.strftime("%H:%M")}-#{row.range.last.strftime("%H:%M")}
           - row.each do |entry,t|
             td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"= entry
+          td
           td
 javascript:
   function staffing(input,old_value,t,user_id,team_id) {

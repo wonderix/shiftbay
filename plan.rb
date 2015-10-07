@@ -20,12 +20,13 @@ class PlanRow
 end
 
 
-class ShiftRow
-  attr_reader :range
-  def initialize(range,date_range)
+class StaffingRow
+  attr_reader :range, :data, :date_range
+  
+  def initialize(range,date_range,data = nil)
     @range = range
     @date_range = date_range
-    @data = Array.new(@date_range.last-@date_range.first)
+    @data = data || Array.new(@date_range.last-@date_range.first)
   end
   def add(date)
     col = date-@date_range.first
@@ -37,12 +38,21 @@ class ShiftRow
       block.call(@data[t-@date_range.first],t)
     end
   end
+  
+  def self.merge(row1,row2)
+    return row1.clone unless row2
+    return row2.clone unless row1
+    if row1.data == row2.data
+      return StaffingRow.new(row1.range.first...row2.range.last,row1.date_range,row1.data)
+    end
+    return nil
+  end
 end
 
 class Plan
   attr_reader :range
-  TIME_SLOT = 7200
-  TIME_SLOT_RANGE = (6*3600/TIME_SLOT)...(20*3600/TIME_SLOT)
+  TIME_SLOT = 1800
+  TIME_SLOT_RANGE = (0*3600/TIME_SLOT)...(24*3600/TIME_SLOT)
 
   def initialize(range)
     @range = range
@@ -88,7 +98,7 @@ class Plan
       first = [ from/TIME_SLOT, TIME_SLOT_RANGE.first].max
       last =  [ to/TIME_SLOT, TIME_SLOT_RANGE.last].min
       for t in first...last
-        time_row = @time_rows[t] ||= ShiftRow.new((@range.first.to_time+t*TIME_SLOT)...(@range.first.to_time+(t+1)*TIME_SLOT),@range)
+        time_row = @time_rows[t] ||= StaffingRow.new((@range.first.to_time+t*TIME_SLOT)...(@range.first.to_time+(t+1)*TIME_SLOT),@range)
         time_row.add(date)
       end
     end
@@ -100,9 +110,19 @@ class Plan
   end
 
   def each_time_row(&block)
+    p = nil
     @time_rows.each do | k |
-      block.call(k) if k
+      if k
+        p = k unless p
+        if p.data == k.data
+          p = StaffingRow.new(p.range.first...k.range.last,k.date_range,k.data)
+        else
+          block.call(p)
+          p = k
+        end
+      end
     end
+    block.call(p) if p
   end
 
 end

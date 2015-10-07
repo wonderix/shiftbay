@@ -107,6 +107,13 @@ body {
   min-height: 700px;
 }
 
+tr.noprint {
+  display : table-row;
+}
+tr.print {
+  display : none;
+}
+
 h1 {
   text-transform: uppercase;
 }
