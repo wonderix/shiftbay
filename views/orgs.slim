@@ -1,0 +1,6 @@
+.plan
+  table
+    - @organizations.each do | org |
+      tr
+        td
+          a href=url("/#{org.id}/plan") =org.name

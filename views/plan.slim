@@ -1,9 +1,12 @@
 script src="lib/jquery-2.1.4.min.js" 
+- plan_url = url("/#{@organization.id}/plan")
+- gnatt_url = url("/#{@organization.id}/gnatt")
+- staffing_url = url("/#{@organization.id}/staffing")
 - date = @range.first
-button.nav.noprint onClick="location.href='/plan?date=' + escape('#{date.prev_month}')" <
-button.nav.noprint onClick="location.href='/plan?date=' + escape('#{date.next_month}')" >
-button.nav.noprint onClick="location.href='/plan?date=' + escape('#{Date.today}')" Heute
-button.nav.noprint onClick="location.href='/plan.pdf?date=' + escape('#{date}')" Drucken
+button.nav.noprint onClick="location.href='#{plan_url}?date=' + escape('#{date.prev_month}')" <
+button.nav.noprint onClick="location.href='#{plan_url}?date=' + escape('#{date.next_month}')" >
+button.nav.noprint onClick="location.href='#{plan_url}?date=' + escape('#{Date.today}')" Heute
+button.nav.noprint onClick="location.href='#{plan_url}.pdf?date=' + escape('#{date}')" Drucken
 
 p
 .plan
@@ -19,7 +22,7 @@ p
         th
         - plan.each_header do |t|
           th class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
-            a href="#{url("/gnatt")}?date=#{escape(t)}"="#{t.strftime("%d")}"
+            a href="#{gnatt_url}?date=#{escape(t)}"="#{t.strftime("%d")}"
         th Ist
         th Soll
       - plan.each_row do |row|
@@ -64,7 +67,7 @@ javascript:
   function staffing(input,old_value,t,user_id,team_id) {
     var value = input.value;
     request = $.ajax({
-      url: '#{url("/staffing")}',
+      url: '#{staffing_url}',
       method: 'POST',
       data: { value: value, old_value: old_value, date: t, user_id: user_id, team_id: team_id}
     });

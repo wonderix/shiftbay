@@ -17,21 +17,38 @@ class Setup < ActiveRecord::Migration
       t.decimal :working_hours
       t.string  :job_title
       t.belongs_to :qualification
+      t.binary    :picture
    end
     
     
+    create_table :organizations do |t|
+      t.string     :name
+    end
+
+    create_table :groups do |t|
+      t.string     :name
+      t.integer    :role
+      t.belongs_to :organization
+    end
+
+   create_table :group_members do |t|
+      t.belongs_to :user, index: true
+      t.belongs_to :group, index: true
+    end
+
+    create_table :teams do |t|
+      t.string :name
+      t.belongs_to :organization
+    end
+
     create_table :team_members do |t|
       t.belongs_to :user, index: true
       t.belongs_to :team, index: true
-      t.integer    :role
     end
  
-    create_table :teams do |t|
-      t.string :name
-    end
-
     create_table :qualifications do |t|
       t.string :name
+      t.belongs_to :organization
     end
 
    create_table :shifts do |t|
@@ -42,6 +59,7 @@ class Setup < ActiveRecord::Migration
       t.string  :name
       t.string  :abbrev
       t.decimal :working_hours
+      t.belongs_to :organization
     end
     
     add_index :shifts, :abbrev
@@ -56,21 +74,26 @@ class Setup < ActiveRecord::Migration
 
     reversible do |dir|
       dir.up do
+      
+        org = Organization.create(name: "Sonnenhof")
         ex = Qualification.create :name => "Examiniert"
-        teams = [ "1. OG" , "EG" , "2. OG" , "West" , "3. OG" ].map{ | i |  Team.create :name => i }
+        teams = [ "1. OG" , "EG" , "2. OG" , "West" , "3. OG" ].map{ | i |  Team.create :name => i , organization: org }
         users = %w(Ulrich Monika Julian Daniel Thorsten).map{ | name | User.create :name => name, :email => "#{name}@web.de", :qualification => ex }
+        group = Group.create(organization: org, name: "Owners" , role: Group::OWNER )
+        GroupMember.create(group: group, user: users[0])
+        group = Group.create(organization: org, name: "Members" , role: Group::MEMBER )
         teams.each do | team |
-          TeamMember.create team: team, user: users[0] , role: TeamMember::OWNER
+          TeamMember.create team: team, user: users[0] 
         end
         users[1...-1].each do | user |
-          TeamMember.create team: teams[0], user: user , role: TeamMember::MEMBER
+          TeamMember.create team: teams[0], user: user
         end          
-        t0 = Time.local(2000,1,1.0,0,0)
+
         shifts = []
-        shifts << Shift.create(:name => "Früh",    :abbrev => "F", :working_hours => 6.25, :from1 => offset("6:15"),  :to1 => offset("13:30"))
-        shifts << Shift.create(:name => "Spät",    :abbrev => "S", :working_hours => 6.25, :from1 => offset("13:00"), :to1 => offset("20:00"))
-        shifts << Shift.create(:name => "Geteilt", :abbrev => "G", :working_hours => 6.25, :from1 => offset("6:15"),  :to1 => offset("11:00"), :from2 => offset("16:00") , :to2 => offset("20:00"))
-        shifts << Shift.create(:name => "Nacht",   :abbrev => "N", :working_hours => 12,   :from1 => offset("20:00"), :to1 => offset("6:30")+24*60*60)
+        shifts << Shift.create(:organization => org, :name => "Früh",    :abbrev => "F", :working_hours => 6.25, :from1 => offset("6:15"),  :to1 => offset("13:30"))
+        shifts << Shift.create(:organization => org, :name => "Spät",    :abbrev => "S", :working_hours => 6.25, :from1 => offset("13:00"), :to1 => offset("20:00"))
+        shifts << Shift.create(:organization => org, :name => "Geteilt", :abbrev => "G", :working_hours => 6.25, :from1 => offset("6:15"),  :to1 => offset("11:00"), :from2 => offset("16:00") , :to2 => offset("20:00"))
+        shifts << Shift.create(:organization => org, :name => "Nacht",   :abbrev => "N", :working_hours => 12,   :from1 => offset("20:00"), :to1 => offset("6:30")+24*60*60)
         for day in 1..30
           date = Date.new(2015,10,day)
           users.each do | u |

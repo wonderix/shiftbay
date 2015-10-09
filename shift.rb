@@ -15,17 +15,37 @@ class User <ActiveRecord::Base
   has_many   :teams, :through => :team_members
 end
 
+class Organization <ActiveRecord::Base
+  has_many  :teams
+  has_many  :shifts
+  has_many  :groups
+  def self.mine(user)
+    self.joins(groups: :group_members).where( group_members: {user_id: user.id})
+  end
+end
+
+class Group <ActiveRecord::Base
+  MEMBER = 1
+  PLANNER = 2
+  OWNER = 4
+  has_many  :group_members
+  has_many  :users, :through => :group_members
+  belongs_to :organization
+end
+
+class GroupMember < ActiveRecord::Base
+  belongs_to :user
+  belongs_to :group
+end
 
 class Team <ActiveRecord::Base
   has_many  :staffings
   has_many  :team_members
   has_many  :users, :through => :team_members
+  belongs_to :organization
 end
 
 class TeamMember < ActiveRecord::Base
-  MEMBER = 1
-  PLANNER = 2
-  OWNER = 3
   belongs_to :team
   belongs_to :user
 end
@@ -38,6 +58,7 @@ end
 
 class Shift <ActiveRecord::Base
   has_many :staffings
+  belongs_to :organization
 end
 
 class Staffing <ActiveRecord::Base
@@ -123,13 +144,14 @@ helpers do
   end
   def get_plan(options = {})
     @user = current_user
+    @organization = Organization.mine(@user).find(params[:organization])
     @plans = []
     @range = Plan.range(params[:date])
-    @user.team_members().includes(:team).each do | tm |
+    @organization.teams.each do | team |
       plan = Plan.new(@range)
-      tm.team.users.order(:name).each { | user | plan.add_user(user)}
-      @plans << OpenStruct.new(team: tm.team, plan: plan, writable: true) # (tm.role == TeamMember::OWNER || tm.role == TeamMember::PLANNER))
-      Staffing.includes(:user,:shift).where(date: plan.range, team: tm.team).each do | staffing |
+      team.users.order(:name).each { | user | plan.add_user(user)}
+      @plans << OpenStruct.new(team: team, plan: plan, writable:  true)
+      Staffing.includes(:user,:shift).where(date: plan.range, team: team).each do | staffing |
         plan.add(staffing.date,staffing.shift,staffing.user)
       end
     end
@@ -170,10 +192,15 @@ post "/login" do
 end
 
 get "/" do
-  redirect url("/plan")
+  @user = current_user
+  @organizations = Organization.mine(@user)
+  slim :orgs
 end
 
-post "/staffing" do 
+
+post "/:organization/staffing" do 
+  @user = current_user
+  @organization = Organization.mine(@user).find(params[:organization])
   user = User.find(params[:user_id])
   shift = Shift.find_by(:abbrev => params[:value])
   team = Team.find(params[:team_id])
@@ -194,11 +221,11 @@ post "/staffing" do
   ""
 end
 
-get "/plan" do
+get "/:organization/plan" do
   get_plan
 end
 
-get "/plan.pdf" do
+get "/:organization/plan.pdf" do
   html = get_plan(:layout => :layout_pdf)
   headers[ 'content-type'] = 'application/pdf'
   # headers[ 'content-disposition'] = "attachment; filename=plan.pdf"
@@ -206,14 +233,15 @@ get "/plan.pdf" do
   kit.to_pdf
 end
 
-get "/gnatt" do
+get "/:organization/gnatt" do
   @user = current_user
+  @organization = Organization.mine(@user).find(params[:organization])
   @gnatts = []
   @range = Gnatt.range(params[:date])
-  @user.team_members().includes(:team).each do | tm |
+  @organization.teams.each do | team |
     gnatt = Gnatt.new(@range)
-    @gnatts << OpenStruct.new(:team => tm.team, :gnatt => gnatt)
-    Staffing.includes(:user,:shift).where(:date => (gnatt.date-1)..gnatt.date, :team => tm.team).each do | staffing |
+    @gnatts << OpenStruct.new(:team => team, :gnatt => gnatt)
+    Staffing.includes(:user,:shift).where(:date => (gnatt.date-1)..gnatt.date, :team => team).each do | staffing |
       time = staffing.date.to_time
       shift = staffing.shift
       from1 = time + shift.from1
@@ -229,3 +257,9 @@ get "/gnatt" do
   slim :gnatt
 end
 
+get "/:organization/teams" do
+  @user = current_user
+  @organization = Organization.mine(@user).find(params[:organization])
+  @teams = @organization.teams
+  slim :teams
+end

@@ -15,14 +15,17 @@ html
             .status 
               a(href=url("/about")) About Us
               .user #{@user ? @user.name : ""}
-        tr
-          td(colspan=2)
-            .nav
-              ul
-                li
-                  a class="#{path == '/plan'  ? 'selected' : ''}" href="#{url("/plan")}" Schichtplan
-                li
-                  a class="#{path == '/gnatt' ? 'selected' : ''}" href="#{url("/gnatt")}" Gnatt
+        - if @organization
+          tr
+            td(colspan=2)
+              .nav
+                ul
+                  li
+                    a class="#{path == "/#{@organization.id}/plan"  ? 'selected' : ''}" href="#{url("/#{@organization.id}/plan")}" Schichtplan
+                  li
+                    a class="#{path == "/#{@organization.id}/gnatt" ? 'selected' : ''}" href="#{url("/#{@organization.id}/gnatt")}" Gnatt
+                  li
+                    a class="#{path == "/#{@organization.id}/teams" ? 'selected' : ''}" href="#{url("/#{@organization.id}/teams")}" Teams
         tr
           td
             .sidebar

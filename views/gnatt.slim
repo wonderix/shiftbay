@@ -1,9 +1,10 @@
 - date = @range.first.to_date
-button onClick="location.href='/gnatt?date=' + escape('#{date.prev_week}')" <<
-button onClick="location.href='/gnatt?date=' + escape('#{date.prev_day}')" <
-button onClick="location.href='/gnatt?date=' + escape('#{date.next_day}')" >
-button onClick="location.href='/gnatt?date=' + escape('#{date.next_week}')" >>
-button onClick="location.href='/gnatt?date=' + escape('#{Date.today}')" Heute
+- gnatt_url = url("/#{@organization.id}/gnatt")
+button onClick="location.href='#{gnatt_url}?date=' + escape('#{date.prev_week}')" <<
+button onClick="location.href='#{gnatt_url}?date=' + escape('#{date.prev_day}')" <
+button onClick="location.href='#{gnatt_url}?date=' + escape('#{date.next_day}')" >
+button onClick="location.href='#{gnatt_url}?date=' + escape('#{date.next_week}')" >>
+button onClick="location.href='#{gnatt_url}?date=' + escape('#{Date.today}')" Heute
 p
 .gnatt
   h2 #{date}
