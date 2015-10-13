@@ -263,3 +263,10 @@ get "/:organization/teams" do
   @teams = @organization.teams
   slim :teams
 end
+
+get "/:organization/teams/:id" do
+  @user = current_user
+  @organization = Organization.mine(@user).find(params[:organization])
+  @team = @organization.teams.find(params[:id])
+  slim :team
+end

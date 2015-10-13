@@ -3,4 +3,5 @@
     - @organizations.each do | org |
       tr
         td
-          a href=url("/#{org.id}/plan") =org.name
+          b
+            a href=url("/#{org.id}/plan") =org.name

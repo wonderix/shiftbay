@@ -64,8 +64,50 @@ body {
   font-size: 100%;
 }
 .plan th a{
-  text-decoration: none;
   color : black;
+}
+
+.teams {
+  display: block;
+}
+
+.team {
+  float: left;
+  width: 480px;
+  height: 127px;
+  border: 1px solid #aaa;
+  margin: 5px;
+  padding: 5px;
+}
+
+.team.members{
+  display: block;
+}
+
+.member {
+  display: inline-block;
+  vertical-align: top;
+  width: 100px;
+  height: 30px;
+}
+
+.member a {
+  color: black;
+}
+
+.team-member-head input {
+  float: right;
+}
+
+.team-member-list {
+  list-style: none;
+  padding-left:0;
+}
+.team-member-list li {
+  clear: both;  
+}
+.team-member-list form {
+  float: right;  
 }
 
 .gnatt table {
@@ -211,3 +253,11 @@ td.time {
       font-size: 8pt;
 }
 
+a:hover{
+  text-decoration: underline;
+}
+
+a {
+  text-decoration: none;
+  color : rgb(65, 131, 196);
+}
