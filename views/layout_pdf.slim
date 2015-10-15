@@ -2,6 +2,14 @@ html
   head
     css:
       #{File.read("public/css/shiftbay.css")}
+      .page-break{
+          page-break-after:always;
+          clear:both;
+          display:block;
+      }      
+      .noprint {
+        display : none;
+      }
       tr.noprint {
         display : none;
       }

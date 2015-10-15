@@ -58,6 +58,9 @@ body {
  	padding: 1px;
  	white-space: nowrap;
 }
+.plan td.username {
+  font-weight: bold;
+}
 .plan input {
   background: none;
   border: none;

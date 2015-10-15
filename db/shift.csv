@@ -1,0 +1,39 @@
+F;  6:15-13:30;;6,25;
+FD;  9:00-17:30;;7,7;
+T;  6:15-20:00;;12;
+ZD;16:00-18:30;;2,5;
+FK;  6:15-16.00;;7,75;
+S;13:00-20:00;;6,5;
+A;15:45-20:00;;3,5;
+SS;18:30-20:00;;1,5;
+N;19:30-  6:30;;10;
+G;  6:15-12:00;15:30-20:00;8;
+KD;12:00-16:00;;2;
+∞;;;0;Frei
+K;;;6,5;Krank
+FA;;;6,5;Freizeitausgleich
+B;;;0;Rufbereitschaft
+KK;;;6,5;Kind Krank
+PB;;;6,5;Praxisbesuch
+O;;;6,5;Schule
+AE;;;6,5;Auﬂeneinsatz
+‹T;;;0;‹bertrag von Stunden
+M;;;6,5;Mutterschutz
+BV;;;0;% Besch‰ftigungsverh‰ltnis
+FB;;;6,5;Fortbildung
+E;;;0;Erziehungsurlaub
+U;;;6,5;Urlaub
+UA;;;0;Unentschuldigte Abwesenheit
+UU;;;0;Unbezahlter Urlaub
+F1;8:00-12:00;;4;
+F2;8:00-13:00;;5;
+F3;8:00-14:00;;6;
+F4;8:00-15:30;;7;
+F5;8:30- 12:00;;3,5;
+F6;8:30- 12:30;;4;
+F7;8:30- 14:30;;6;
+F8;8:00- 16:30;;8,5;
+S1;12:00- 16:00;;4;
+S2;14:00- 18:00;;4;
+GT;08:30- 12:00;13:30-18:00;7;
+F9;09:00- 11:30;;2,5;

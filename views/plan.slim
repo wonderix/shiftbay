@@ -13,6 +13,7 @@ p
   h2 #{@range.first}
   table
     - @plans.each do | plan_entry |
+      .pagebreak
       - plan = plan_entry.plan
       - team = plan_entry.team
       tr
@@ -27,7 +28,7 @@ p
         th Soll
       - plan.each_row do |row|
         tr
-          td= row.user.name
+          td.username= row.user.name
           - row.each do |entry,t|
             -case entry
             -when Shift
@@ -43,13 +44,13 @@ p
           td= row.working_hours
           td= 200
         tr.print
-          td
+          td= row.user.job_title
           - row.each do |entry,t|
             td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }" &nbsp;
           td &nbsp;
           td &nbsp;
         tr.print
-          td
+          td= "BV #{(row.user.level_of_employment*100).to_i}%"
           - row.each do |entry,t|
             td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }" &nbsp;
           td &nbsp;

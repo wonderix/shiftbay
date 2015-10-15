@@ -13,6 +13,9 @@ class User <ActiveRecord::Base
   has_many  :team_members
   belongs_to :qualification
   has_many   :teams, :through => :team_members
+  def name()
+    self.firstname + " " + self.lastname
+  end
 end
 
 class Organization <ActiveRecord::Base
@@ -79,26 +82,28 @@ PDFKit.configure do |config|
 end
 
 
-  register Sinatra::ActiveRecordExtension
-  
-  ROOT = File.dirname(File.expand_path(__FILE__))
-  DB = "sqlite3:#{ROOT}/shift.db"
-  enable :sessions
-  set :bind, '0.0.0.0'
-  set :database, DB
-  set :session_secret, "sRfBLNNJ0F/gaWpmjXasda0WKw5Q="
+register Sinatra::ActiveRecordExtension
+
+ROOT = File.dirname(File.expand_path(__FILE__))
+DB = "sqlite3:#{ROOT}/shift.db"
+enable :sessions
+set :bind, '0.0.0.0'
+set :database, DB
+set :session_secret, "sRfBLNNJ0F/gaWpmjXasda0WKw5Q="
 
 
 ActiveRecord::Base.logger.level = 3
 ActiveRecord::Migrator.migrate(File.join(ROOT,"db/migrate"), nil)
 ActiveRecord::Base.logger = Logger.new(STDOUT)
 
+load File.join(ROOT,"db/seeds.rb") if Organization.count == 0
+
 helpers do
   def current_user()
     user = nil
     begin
       # user = User.find(session[:user])
-      user = User.find_by(name: "Ulrich")
+      user = User.find_by(lastname: "Kramer")
     rescue => ex
       p ex
     end
@@ -147,9 +152,10 @@ helpers do
     @organization = Organization.mine(@user).find(params[:organization])
     @plans = []
     @range = Plan.range(params[:date])
-    @organization.teams.each do | team |
+    @organization.teams.order(:name).each do | team |
+      puts team.name
       plan = Plan.new(@range)
-      team.users.order(:name).each { | user | plan.add_user(user)}
+      team.users.order(:firstname,:lastname).each { | user | plan.add_user(user)}
       @plans << OpenStruct.new(team: team, plan: plan, writable:  true)
       Staffing.includes(:user,:shift).where(date: plan.range, team: team).each do | staffing |
         plan.add(staffing.date,staffing.shift,staffing.user)
