@@ -3,7 +3,7 @@ require 'csv'
 
 def time_range(value)
   return [ nil , nil] if value.nil? || value.empty? 
-  from, to = value.split(/[\s-]+/).map{ | t | Time.parse("2000-01-01T"+t) - Time.local(2000,1,1,0,0,0) }
+  from, to = value.strip.split(/[\s\-]+/).map{ | t | (Time.parse("2000-01-01T"+t) - Time.local(2000,1,1,0,0,0)).to_i }
   to += 24*60*60 if from > to
   [ from, to ]
 end
@@ -16,8 +16,9 @@ shifts = []
 CSV.read(File.join(File.dirname(__FILE__),"shift.csv"),col_sep: ";", encoding: "windows-1252").each do | row |
   from1 , to1 = time_range(row[1])
   from2 , to2 = time_range(row[2])
-  shifts << Shift.create(:organization => org, :description => row[4],    :abbrev => row[0], :description => row[4], :working_hours => row[3], :from1 => from1,  :to1 => to1, :from2 => from2,  :to2 => to2)
+  shifts << Shift.create(:organization => org, :description => row[4],    :abbrev => row[0], :description => row[4], :working_hours => row[3].sub(",",".").to_f, :from1 => from1,  :to1 => to1, :from2 => from2,  :to2 => to2)
 end
+
 ex = Qualification.create :name => "Examiniert"
 helper = Qualification.create :name => "Helfer"
 

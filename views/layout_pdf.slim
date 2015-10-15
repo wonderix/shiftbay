@@ -2,6 +2,9 @@ html
   head
     css:
       #{File.read("public/css/shiftbay.css")}
+      table {
+        page-break-inside:avoid;
+      }
       .page-break{
           page-break-after:always;
           clear:both;

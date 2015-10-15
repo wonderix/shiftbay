@@ -46,7 +46,7 @@ body {
 .plan table {
 	border-style: solid;
 	border-width: 1pt;
- 	border-collapse:collapse
+ 	border-collapse:collapse;
 }
 
 .plan th, .plan td {
@@ -60,6 +60,7 @@ body {
 }
 .plan td.username {
   font-weight: bold;
+ 	width: 200px;
 }
 .plan input {
   background: none;

@@ -59,6 +59,7 @@ class Plan
     @table = []
     @rows = {}
     @time_rows = Array.new(24*3600/TIME_SLOT)
+    @shifts = {}
   end
   
   
@@ -107,6 +108,10 @@ class Plan
   
   def each_row(&block)
     @table.each &block
+  end
+
+  def each_shift(&block)
+    @shifts.values.each &block
   end
 
   def each_time_row(&block)
