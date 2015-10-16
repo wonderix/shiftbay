@@ -1,11 +1,12 @@
 html
   head
+    meta name="pdfkit-orientation" content="Landscape"
     css:
       #{File.read("public/css/shiftbay.css")}
       table {
         page-break-inside:avoid;
       }
-      .page-break{
+      .pagebreak{
           page-break-after:always;
           clear:both;
           display:block;
@@ -18,6 +19,9 @@ html
       }
       tr.print {
         display : table-row;
+      }
+      .print {
+        display : initial;
       }
     title= "Dienstplaner"
   body

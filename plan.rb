@@ -50,7 +50,7 @@ class StaffingRow
 end
 
 class Plan
-  attr_reader :range
+  attr_reader :range, :working_hours
   TIME_SLOT = 1800
   TIME_SLOT_RANGE = (0*3600/TIME_SLOT)...(24*3600/TIME_SLOT)
 
@@ -59,7 +59,8 @@ class Plan
     @table = []
     @rows = {}
     @time_rows = Array.new(24*3600/TIME_SLOT)
-    @shifts = {}
+    @working_hours = 0
+    @range.each { | date| @working_hours += 40.0/6.0 unless date.sunday? }
   end
   
   

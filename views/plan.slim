@@ -41,7 +41,7 @@ p
                 -if plan_entry.writable
                   input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id},#{team.id})"
           td= row.working_hours
-          td= 200
+          td= ("%5.1f" % plan.working_hours*row.user.level_of_employment)
         tr.print
           td= row.user.job_title
           - row.each do |entry,t|
@@ -63,7 +63,30 @@ p
             td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"= entry
           td
           td
+    .print
+      h4 Legende
+      table.legend
+        tr
+        - 8.times do 
+          th.weekend 
+          th von
+          th bis
+          th von
+          th bis
+          th Beschreibung
+        - time = Time.local(2000,1,1,0,0,0)
+        - shifts = @organization.shifts.order(:abbrev).to_a
+        - while ! shifts.empty?
+          tr
+            - shifts.shift(8).each do | shift |
+              th.weekend= shift.abbrev
+              td= shift.from1 ? (time + shift.from1).strftime("%H:%M") : ""
+              td= shift.to1 ? (time + shift.to1).strftime("%H:%M") : ""
+              td= shift.from2 ? (time + shift.from2).strftime("%H:%M") : ""
+              td= shift.to2 ? (time + shift.to2).strftime("%H:%M") : ""
+              td= shift.description
     .pagebreak
+      p
       p
 javascript:
   function staffing(input,old_value,t,user_id,team_id) {

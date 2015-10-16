@@ -71,6 +71,10 @@ body {
   color : black;
 }
 
+table.legend {
+  font-size : 60%;
+}
+
 .teams {
   display: block;
 }
@@ -157,6 +161,10 @@ tr.noprint {
   display : table-row;
 }
 tr.print {
+  display : none;
+}
+
+.print {
   display : none;
 }
 
