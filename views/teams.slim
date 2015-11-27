@@ -1,10 +1,4 @@
-.plan
-  .teams
-    - @teams.each do |team|
-      .team
-        a href="#{url("/#{@organization.id}/teams/#{team.id}")}"
-          h3  = team.name
-        .members
-          - team.users.first(4).each do |user|
-            .member
-              a href="#{url("/users/#{user.id}")}" = user.name
+- @teams.order(:name).each do |team|
+  a href=url("/#{@organization.id}/teams/#{team.id}")
+    h3  = team.name
+  div= team.users.order(:firstname).map{ |user| user.name}.join(", ")

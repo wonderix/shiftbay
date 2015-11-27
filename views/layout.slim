@@ -27,6 +27,8 @@ html
                     a class="#{path == "/#{@organization.id}/gnatt" ? 'selected' : ''}" href="#{url("/#{@organization.id}/gnatt")}" Gnatt
                   li
                     a class="#{path == "/#{@organization.id}/teams" ? 'selected' : ''}" href="#{url("/#{@organization.id}/teams")}" Teams
+                  li
+                    a class="#{path == "/#{@organization.id}/users" ? 'selected' : ''}" href="#{url("/#{@organization.id}/users")}" Users
         tr
           td
             .sidebar

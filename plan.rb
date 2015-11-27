@@ -108,6 +108,7 @@ class Plan
   end
   
   def each_row(&block)
+    @table.sort!{ | x , y | x.user.firstname <=> y.user.firstname }
     @table.each &block
   end
 

@@ -2,10 +2,11 @@
 - gnatt_url = url("/#{@organization.id}/gnatt")
 - staffing_url = url("/#{@organization.id}/staffing")
 - date = @range.first
-button.nav.noprint onClick="location.href='#{plan_url}?date=' + escape('#{date.prev_month}')" <
-button.nav.noprint onClick="location.href='#{plan_url}?date=' + escape('#{date.next_month}')" >
-button.nav.noprint onClick="location.href='#{plan_url}?date=' + escape('#{Date.today}')" Heute
-button.nav.noprint onClick="location.href='#{plan_url}.pdf?date=' + escape('#{date}')" Drucken
+- unless @print
+  button.nav onClick="location.href='#{plan_url}?date=' + escape('#{date.prev_month}')" <
+  button.nav onClick="location.href='#{plan_url}?date=' + escape('#{date.next_month}')" >
+  button.nav onClick="location.href='#{plan_url}?date=' + escape('#{Date.today}')" Heute
+  button.nav onClick="location.href='#{plan_url}.pdf?date=' + escape('#{date}')" Drucken
 
 p
 .plan
@@ -41,29 +42,31 @@ p
                 -if plan_entry.writable
                   input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id},#{team.id})"
           td= row.working_hours
-          td= ("%5.1f" % plan.working_hours*row.user.level_of_employment)
-        tr.print
-          td= row.user.job_title
-          - row.each do |entry,t|
-            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }" &nbsp;
-          td &nbsp;
-          td &nbsp;
-        tr.print
-          td= "BV #{(row.user.level_of_employment*100).to_i}%"
-          - row.each do |entry,t|
-            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }" &nbsp;
-          td &nbsp;
-          td &nbsp;
+          td= ("%5.1f" % (plan.working_hours*row.user.level_of_employment))
+        - if @print
+          tr
+            td= row.user.job_title
+            - row.each do |entry,t|
+              td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }" &nbsp;
+            td &nbsp;
+            td &nbsp;
+          tr
+            td= "BV #{(row.user.level_of_employment*100).to_i}%"
+            - row.each do |entry,t|
+              td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }" &nbsp;
+            td &nbsp;
+            td &nbsp;
       tr
         td colspan=3+(@range.last-@range.first)
-      - plan.each_time_row do |row|
-        tr.noprint
-          td #{row.range.first.strftime("%H:%M")}-#{row.range.last.strftime("%H:%M")}
-          - row.each do |entry,t|
-            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"= entry
-          td
-          td
-    .print
+      - unless @print
+        - plan.each_time_row do |row|
+          tr
+            td #{row.range.first.strftime("%H:%M")}-#{row.range.last.strftime("%H:%M")}
+            - row.each do |entry,t|
+              td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"= entry
+            td
+            td
+    - if @print
       h4 Legende
       table.legend
         tr

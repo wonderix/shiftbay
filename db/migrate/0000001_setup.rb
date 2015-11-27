@@ -13,7 +13,10 @@ class Setup < ActiveRecord::Migration
       t.decimal :level_of_employment
       t.string  :job_title
       t.belongs_to :qualification
+      t.belongs_to :organization
       t.binary    :picture
+      t.date    :employed_since
+      t.date    :employed_until
    end
     
     

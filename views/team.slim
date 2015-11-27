@@ -1,9 +1,15 @@
 .team-member-head
-  input placeholder="Benutzer einladen"
-  h3 Teammitglieder
+  form action=url("/#{@organization.id}/team_members") method="POST"
+    input type="hidden" name="team_id" value=@team.id
+    select name="user_id" 
+      - @organization.users.employed.where.not(:id => @team.users.map{ | u | u.id}).order(:firstname).each do  |user|
+        option value=user.id =user.name
+    button Einladen
+  h3 Teammitglieder #{@team.name}
 ul.team-member-list
-  - @team.users.each do |user|
+  - @team.team_members.includes(:user).order("users.firstname").each do |tm|
     li
-      a href="#{url("/users/#{user.id}")}" = user.name
-      form 
-        button Löschen
+      span= tm.user.name
+      form action=url("/#{@organization.id}/team_members/#{tm.id}") method="POST"
+        input type="hidden" name="_method" value="delete"
+        button Delete

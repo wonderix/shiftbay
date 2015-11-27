@@ -9,17 +9,17 @@ SS;18:30-20:00;;1,5;
 N;19:30-  6:30;;10;
 G;  6:15-12:00;15:30-20:00;8;
 KD;12:00-16:00;;2;
-°;;;0;Frei
+Â°;;;0;Frei
 K;;;6,5;Krank
 FA;;;6,5;Freizeitausgleich
 B;;;0;Rufbereitschaft
 KK;;;6,5;Kind Krank
 PB;;;6,5;Praxisbesuch
 O;;;6,5;Schule
-AE;;;6,5;Außeneinsatz
-ÜT;;;0;Übertrag von Stunden
+AE;;;6,5;AuÃŸeneinsatz
+ÃœT;;;0;Ãœbertrag von Stunden
 M;;;6,5;Mutterschutz
-BV;;;0;% Beschäftigungsverhältnis
+BV;;;0;% BeschÃ¤ftigungsverhÃ¤ltnis
 FB;;;6,5;Fortbildung
 E;;;0;Erziehungsurlaub
 U;;;6,5;Urlaub

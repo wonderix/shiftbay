@@ -12,7 +12,14 @@ class User <ActiveRecord::Base
   has_many   :staffings
   has_many  :team_members
   belongs_to :qualification
+  belongs_to :organization
   has_many   :teams, :through => :team_members
+  before_create :set_defaults
+  scope :employed, -> { where("employed_until > ?", Time.now) }
+  def set_defaults
+    self.employed_since = Time.now
+    self.employed_until = Time.new(2100,1,1)
+  end
   def name()
     self.firstname + " " + self.lastname
   end
@@ -22,6 +29,7 @@ class Organization <ActiveRecord::Base
   has_many  :teams
   has_many  :shifts
   has_many  :groups
+  has_many  :users
   def self.mine(user)
     self.joins(groups: :group_members).where( group_members: {user_id: user.id})
   end
@@ -90,13 +98,17 @@ enable :sessions
 set :bind, '0.0.0.0'
 set :database, DB
 set :session_secret, "sRfBLNNJ0F/gaWpmjXasda0WKw5Q="
-
+use Rack::MethodOverride
 
 ActiveRecord::Base.logger.level = 3
 ActiveRecord::Migrator.migrate(File.join(ROOT,"db/migrate"), nil)
 ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 load File.join(ROOT,"db/seeds.rb") if Organization.count == 0
+
+before do
+  content_type :html, 'charset' => 'utf-8'
+end
 
 helpers do
   def current_user()
@@ -107,7 +119,7 @@ helpers do
     rescue => ex
       p ex
     end
-    redirect "#{url("/login")}?referrer=#{CGI.escape(env['REQUEST_URI'])}" unless user
+    redirect "#{url("/login")}?referer=#{CGI.escape(env['REQUEST_URI'])}" unless user
     user
   end
   
@@ -118,36 +130,7 @@ helpers do
   	slim :calendar, :layout => false
   end
   
-  def adjust_factor(staffing,delta)
-		from, to = Calendar.week(staffing.shift.from)
-		losers = []
-		winners = []
-		Staffing.includes(:shift).where('shifts.from' => from...to, :qualification => staffing.qualification, :team => staffing.team).where.not(:user_count  => 0).each do | s |
-			w = s.user_count * s.shift.working_hours
-			if s.shift.from.hour == staffing.shift.from.hour
-				losers << [ s , w ]
-			else
-				winners << [ s , w ]
-			end
-		end
-		sum = 0.0
-		losers.each do | staffing, w |
-			sum += w * delta
-			staffing.current_factor -= w * delta
-			staffing.save
-		end
-		p sum
-		sum_weight = 0.0
-		winners.each do | staffing, w |
-			sum_weight += w
-		end
-		sum /= sum_weight
-		winners.each do | staffing, w |
-			staffing.current_factor += sum * w
-			staffing.save
-		end
-  end
-  def get_plan(options = {})
+  def get_plan(print = false)
     @user = current_user
     @organization = Organization.mine(@user).find(params[:organization])
     @plans = []
@@ -161,7 +144,8 @@ helpers do
         plan.add(staffing.date,staffing.shift,staffing.user)
       end
     end
-    slim :plan, options
+    @print = print
+    slim :plan, layout: ( print ? :layout_pdf : :layout)
   end
 end
 
@@ -170,12 +154,12 @@ after do
 end
 
 get "/login" do
-  @referrer = params[:referrer] || url("/")
+  @referer = params[:referer] || url("/")
   slim :login
 end
 
 get "/about" do
-  @referrer = params[:referrer] || url("/")
+  @referer = params[:referer] || url("/")
   slim :about
 end
 
@@ -190,7 +174,7 @@ post "/login" do
     user  = User.where(:email => @username).first
     raise "Invalid user #{@username}" unless user
     session[:user] = user.id
-    redirect(params[:referrer])
+    redirect(params[:referer])
   rescue Exception => exc
     @exception = exc
     slim :login
@@ -232,7 +216,7 @@ get "/:organization/plan" do
 end
 
 get "/:organization/plan.pdf" do
-  html = get_plan(:layout => :layout_pdf)
+  html = get_plan(true)
   headers[ 'content-type'] = 'application/pdf'
   # headers[ 'content-disposition'] = "attachment; filename=plan.pdf"
   kit = PDFKit.new(html)
@@ -244,7 +228,7 @@ get "/:organization/gnatt" do
   @organization = Organization.mine(@user).find(params[:organization])
   @gnatts = []
   @range = Gnatt.range(params[:date])
-  @organization.teams.each do | team |
+  @organization.teams.order(:name).each do | team |
     gnatt = Gnatt.new(@range)
     @gnatts << OpenStruct.new(:team => team, :gnatt => gnatt)
     Staffing.includes(:user,:shift).where(:date => (gnatt.date-1)..gnatt.date, :team => team).each do | staffing |
@@ -270,9 +254,46 @@ get "/:organization/teams" do
   slim :teams
 end
 
+get "/:organization/users" do
+  @user = current_user
+  @organization = Organization.mine(@user).find(params[:organization])
+  @users = @organization.users
+  slim :users
+end
+
+post "/:organization/users" do
+  @user = current_user
+  @organization = Organization.mine(@user).find(params[:organization])
+  @team = @organization.teams.find(params[:team_id])
+  redirect request.referer
+end
+
+delete "/:organization/users/:id" do
+  @user = current_user
+  @organization = Organization.mine(@user).find(params[:organization])
+  User.find(params[:id]).update(:employed_until => Time.now)
+  redirect request.referer
+end
+
 get "/:organization/teams/:id" do
   @user = current_user
   @organization = Organization.mine(@user).find(params[:organization])
   @team = @organization.teams.find(params[:id])
   slim :team
+end
+
+post "/:organization/team_members" do
+  @user = current_user
+  @organization = Organization.mine(@user).find(params[:organization])
+  @team = @organization.teams.find(params[:team_id])
+  user = User.find(params[:user_id])
+  @team.team_members.create user: user
+  redirect request.referer
+end
+
+delete "/:organization/team_members/:id" do
+  @user = current_user
+  @organization = Organization.mine(@user).find(params[:organization])
+  TeamMember.find(params[:id]).destroy
+  redirect request.referer
 end
