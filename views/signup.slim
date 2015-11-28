@@ -1,0 +1,44 @@
+
+form action="#{url("/signup")}" method='POST'
+  - if @exception
+    .exception =@exception
+  .field
+    .label EMail
+    .input
+      input name='email' size=50 value=@params[:email]
+    .detail Enter valid email address
+  .field
+    .label Password
+    .input
+      input name='password' type='password' size=50 value=@params[:password]
+    .detail Enter password
+  .field
+    .label Confirm Password
+    .input
+      input name='password_confirm' type='password' size=50 
+    .detail Please confirm your password
+  .field
+    .label Firstname
+    .input
+      input name='firstname' size=50 value=@params[:firstname]
+    .detail Enter your first name
+  .field
+    .label Lastname
+    .input
+      input name='lastname' size=50 value=@params[:lastname]
+    .detail Enter your last name
+  .field
+    .label Job Title
+    .input
+      input name='job_title' size=50 value=@params[:job_title]
+    .detail Enter your job title
+  .field
+    .label Qualification
+    .input
+      select name='qualification_id' 
+        - Qualification.all.each do | qualification |
+          option value=qualification.id =qualification.name
+    .detail Enter your Qualification
+  .actions
+    button type='submit' Signup
+        

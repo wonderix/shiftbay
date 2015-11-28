@@ -1,18 +1,15 @@
 form action="#{url("/login")}" method='POST'
   input name ='referrer' value=@referrer type='hidden'
-  .table
-    table
-      - if @exception
-        tr
-          td colspan=2 =@exception
-      tr
-        th Username
-        td
-          input name='username' value=@username
-      tr
-        th Password
-        td
-          input name='password' type='password' value=@password
-  br
-  input type='submit' value='Login'
+  - if @exception
+    .exception =@exception
+  .field 
+    .label Email
+    .input
+      input name='email' size=50 value=@email
+  .field 
+    .label Password
+    .input
+      input name='password' size=50 type='password' value=@password
+  .actions
+    button type='submit' Login
         

@@ -1,10 +1,11 @@
 require 'time'
 
 class PlanRow
-  attr_reader :user, :working_hours
-  def initialize(user,range)
+  attr_reader :user, :working_hours, :level_of_employment
+  def initialize(user,range,level_of_employment)
     @user = user
     @range = range
+    @level_of_employment = level_of_employment
     @data = Array.new(range.last-range.first)
     @working_hours = 0.0
   end
@@ -88,9 +89,13 @@ class Plan
     end
   end
   
-  def add_user(user)
+  def add_employment(employment)
+    add_user(employment.user,employment.level)
+  end
+
+  def add_user(user,level_of_employment = 0.0)
     index = @rows[user.id] ||= @table.length
-    row = @table[index] ||=  PlanRow.new(user,@range)
+    row = @table[index] ||=  PlanRow.new(user,@range,level_of_employment)
   end
   
   def add(date,shift,user)

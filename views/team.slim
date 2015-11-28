@@ -1,15 +1,28 @@
-.team-member-head
-  form action=url("/#{@organization.id}/team_members") method="POST"
-    input type="hidden" name="team_id" value=@team.id
-    select name="user_id" 
-      - @organization.users.employed.where.not(:id => @team.users.map{ | u | u.id}).order(:firstname).each do  |user|
-        option value=user.id =user.name
-    button Einladen
-  h3 Teammitglieder #{@team.name}
-ul.team-member-list
-  - @team.team_members.includes(:user).order("users.firstname").each do |tm|
+- is_owned_by = @team.is_owned_by?(@user)
+- team_members = @team.team_members.includes(employment: :user).order("users.firstname")
+.overview-head
+  .content
+    h3 Teammitglieder #{@team.name}
+  .action
+    - if is_owned_by
+      form action=url("/#{@organization.id}/team_members") method="POST"
+        input type="hidden" name="team_id" value=@team.id
+        select name="employment_id" 
+          - employment_ids = team_members.map{ | tm | tm.employment.id}
+          - @organization.employments.includes(:user).where.not(:id => employment_ids).order('users.firstname').each do |employments|
+            option value=employments.id =employments.user.name
+        select name="role" 
+          - TeamMember.roles.each do |role|
+            option value=role.id =role.name
+        button Invite
+ul.overview-list
+  - team_members.each do |tm|
     li
-      span= tm.user.name
-      form action=url("/#{@organization.id}/team_members/#{tm.id}") method="POST"
-        input type="hidden" name="_method" value="delete"
-        button Delete
+      .content
+        div= tm.employment.user.name
+        .detail= tm.role_str
+      .action
+        - if is_owned_by
+          form action=url("/#{@organization.id}/team_members/#{tm.id}") method="POST"
+            input type="hidden" name="_method" value="delete"
+            button Delete

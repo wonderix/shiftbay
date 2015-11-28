@@ -1,7 +1,4 @@
-ul.team-member-list
-  - @users.order(:firstname).employed.each do |user|
+ul.overview-list
+  - @users.order(:firstname).each do |user|
     li
-      span= user.name
-      form action=url("/#{@organization.id}/users/#{user.id}") method="POST"
-        input type="hidden" name="_method" value="delete"
-        button Delete
+      .content= user.name

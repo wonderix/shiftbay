@@ -1,4 +1,7 @@
-- @teams.order(:name).each do |team|
-  a href=url("/#{@organization.id}/teams/#{team.id}")
-    h3  = team.name
-  div= team.users.order(:firstname).map{ |user| user.name}.join(", ")
+ul.overview-list
+  - @teams.order(:name).each do |team|
+    li
+      .content
+        a href=url("/#{@organization.id}/teams/#{team.id}")
+          h3  = team.name
+        div= team.employments.includes(:user).order('users.firstname').map{ |employment| employment.user.name}.join(", ")

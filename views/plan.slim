@@ -42,7 +42,7 @@ p
                 -if plan_entry.writable
                   input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id},#{team.id})"
           td= row.working_hours
-          td= ("%5.1f" % (plan.working_hours*row.user.level_of_employment))
+          td= ("%5.1f" % (plan.working_hours*row.level_of_employment))
         - if @print
           tr
             td= row.user.job_title
@@ -51,7 +51,7 @@ p
             td &nbsp;
             td &nbsp;
           tr
-            td= "BV #{(row.user.level_of_employment*100).to_i}%"
+            td= "BV #{(row.level_of_employment*100).to_i}%"
             - row.each do |entry,t|
               td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }" &nbsp;
             td &nbsp;
@@ -100,6 +100,7 @@ javascript:
       data: { value: value, old_value: old_value, date: t, user_id: user_id, team_id: team_id}
     });
     request.fail(function( jqXHR, textStatus ) {
+      alert(jqXHR.responseText);
       input.value = old_value;
     });
   }

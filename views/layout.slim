@@ -15,12 +15,21 @@ html
           td
             .status 
               a(href=url("/about")) About Us
-              .user #{@user ? @user.name : ""}
-        - if @organization
-          tr
-            td(colspan=2)
-              .nav
-                ul
+              .user
+                - if @user
+                  div= @user.name
+                  div
+                    a href=url("/logout") Logout
+                - else
+                  div
+                    a href=url("/login") Login
+                  div
+                    a href=url("/signup") Signup
+        tr
+          td(colspan=2)
+            .nav
+              ul
+                - if @organization
                   li
                     a class="#{path == "/#{@organization.id}/plan"  ? 'selected' : ''}" href="#{url("/#{@organization.id}/plan")}" Schichtplan
                   li
@@ -28,10 +37,15 @@ html
                   li
                     a class="#{path == "/#{@organization.id}/teams" ? 'selected' : ''}" href="#{url("/#{@organization.id}/teams")}" Teams
                   li
-                    a class="#{path == "/#{@organization.id}/users" ? 'selected' : ''}" href="#{url("/#{@organization.id}/users")}" Users
+                    a class="#{path == "/#{@organization.id}/employments" ? 'selected' : ''}" href="#{url("/#{@organization.id}/employments")}" Employees
+                -else
+                  - if @user
+                    li
+                      a class="#{path == "/" ? 'selected' : ''}" href="#{url("/")}" Organizations
+                - if @user
+                  li
+                    a class="#{path == "/users" ? 'selected' : ''}" href="#{url("/users")}" Users
         tr
-          td
-            .sidebar
-          td
+          td(colspan=2)
             .body
               == yield

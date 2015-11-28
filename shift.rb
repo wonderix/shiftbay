@@ -7,58 +7,98 @@ require 'json'
 require 'pdfkit'
 require_relative 'gnatt.rb'
 require_relative 'plan.rb'
+require 'bcrypt'
+require 'ostruct'
 
 class User <ActiveRecord::Base
+  include BCrypt
+
   has_many   :staffings
-  has_many  :team_members
+  has_many   :employments
   belongs_to :qualification
-  belongs_to :organization
-  has_many   :teams, :through => :team_members
-  before_create :set_defaults
-  scope :employed, -> { where("employed_until > ?", Time.now) }
-  def set_defaults
-    self.employed_since = Time.now
-    self.employed_until = Time.new(2100,1,1)
-  end
+  has_many   :organization, :through => :employments
   def name()
     self.firstname + " " + self.lastname
+  end
+
+  def password
+    @password ||= Password.new(password_hash)
+  end
+
+  def password=(new_password)
+    @password = Password.create(new_password)
+    self.password_hash = @password
+  end
+end
+
+class Employment <ActiveRecord::Base
+  EMPLOYEE = 1
+  TEAM_MANAGER = 2
+  MANAGER = 4
+  belongs_to :organization
+  belongs_to :user
+  def role_str()
+    return "Manager" if ( role & MANAGER == MANAGER )
+    return "Team Manager" if ( role & TEAM_MANAGER == TEAM_MANAGER )
+    return "Employee" if ( role & EMPLOYEE == EMPLOYEE )
+  end
+  def self.roles()
+    [
+      OpenStruct.new(id: EMPLOYEE, name: "Employee"),
+      OpenStruct.new(id: TEAM_MANAGER, name: "Team Manager"),
+      OpenStruct.new(id: MANAGER, name: "Manager")
+    ]
   end
 end
 
 class Organization <ActiveRecord::Base
   has_many  :teams
   has_many  :shifts
-  has_many  :groups
-  has_many  :users
+  has_many  :employments
+  has_many  :users, :through => :employments
   def self.mine(user)
-    self.joins(groups: :group_members).where( group_members: {user_id: user.id})
+    self.joins(:employments).where( employments: {user_id: user.id})
   end
-end
-
-class Group <ActiveRecord::Base
-  MEMBER = 1
-  PLANNER = 2
-  OWNER = 4
-  has_many  :group_members
-  has_many  :users, :through => :group_members
-  belongs_to :organization
-end
-
-class GroupMember < ActiveRecord::Base
-  belongs_to :user
-  belongs_to :group
+  def self.managed_by(user)
+    self.joins(:employments).where( employments: {user_id: user.id, role: Employment::MANAGER})
+  end
+  def teams_owned_by(user)
+    self.teams.includes(team_members: {team_members: :employment}).where(team_members: { employment: {user_id: user.id}, role: TeamMember::OWNER})
+  end
+  def is_manager(user)
+    self.employments.where( employments: {user_id: user.id, role: Employment::MANAGER}).count > 0
+  end
 end
 
 class Team <ActiveRecord::Base
   has_many  :staffings
   has_many  :team_members
-  has_many  :users, :through => :team_members
+  has_many  :employments, :through => :team_members
   belongs_to :organization
+  def is_owned_by?(user)
+    self.team_members.includes(:employment).where( employments: {user_id: user.id}, role: TeamMember::OWNER).count > 0 ||
+      self.organization.is_manager(user)
+  end
 end
 
 class TeamMember < ActiveRecord::Base
+  MEMBER = 1
+  PLANNER = 2
+  OWNER = 4
   belongs_to :team
-  belongs_to :user
+  belongs_to :employment
+  def role_str()
+    return "Owner" if ( role & OWNER == OWNER )
+    return "Planner" if ( role & PLANNER == PLANNER )
+    return "Member" if ( role & MEMBER == MEMBER )
+  end
+  def self.roles()
+    [
+      OpenStruct.new(id: MEMBER, name: "Member"),
+      OpenStruct.new(id: PLANNER, name: "Planner"),
+      OpenStruct.new(id: OWNER, name: "Owner")
+    ]
+  end
 end
 
 class Qualification <ActiveRecord::Base
@@ -114,8 +154,7 @@ helpers do
   def current_user()
     user = nil
     begin
-      # user = User.find(session[:user])
-      user = User.find_by(lastname: "Kramer")
+      user = User.find(session[:user])
     rescue => ex
       p ex
     end
@@ -138,7 +177,7 @@ helpers do
     @organization.teams.order(:name).each do | team |
       puts team.name
       plan = Plan.new(@range)
-      team.users.order(:firstname,:lastname).each { | user | plan.add_user(user)}
+      team.employments.includes(:user).each { | employment | plan.add_employment(employment)}
       @plans << OpenStruct.new(team: team, plan: plan, writable:  true)
       Staffing.includes(:user,:shift).where(date: plan.range, team: team).each do | staffing |
         plan.add(staffing.date,staffing.shift,staffing.user)
@@ -158,6 +197,11 @@ get "/login" do
   slim :login
 end
 
+get "/logout" do
+  session.delete(:user)
+  redirect url("/login")
+end
+
 get "/about" do
   @referer = params[:referer] || url("/")
   slim :about
@@ -167,12 +211,41 @@ get "/user/info" do
   slim :user_info, :layout => false
 end
 
+get "/users" do
+  @user = current_user
+  @users = User.all
+  slim :users
+end
+
+get "/signup" do
+  @params = {}
+  slim :signup
+end
+
+post "/signup" do
+  begin
+    password = params.delete('password')
+    password_confirm = params.delete('password_confirm')
+    raise "Password doesn't match" if password != password_confirm
+    user = User.new(params)
+    user.password = password
+    user.save
+    session[:user] = user.id
+    redirect url("/")
+  rescue Exception => exc
+    @exception = exc
+    @params = params
+    return slim :signup
+  end
+  redirect request.referer
+end
+
 post "/login" do
-  @username = params[:username]
+  @email = params[:email]
   @password = params[:password]
   begin
-    user  = User.where(:email => @username).first
-    raise "Invalid user #{@username}" unless user
+    user  = User.where(:email => @email).first
+    raise "Invalid user #{@email}" unless user && user.password == params[:password]
     session[:user] = user.id
     redirect(params[:referer])
   rescue Exception => exc
@@ -191,13 +264,13 @@ end
 post "/:organization/staffing" do 
   @user = current_user
   @organization = Organization.mine(@user).find(params[:organization])
-  user = User.find(params[:user_id])
+  user = @organization.users.find(params[:user_id])
   shift = Shift.find_by(:abbrev => params[:value])
   team = Team.find(params[:team_id])
   date = Date.parse(params[:date])
   staffing = nil
   if params[:old_value] == ''
-    shift || raise(ActiveRecord::RecordNotFound)
+    shift || halt(400, "Invalid shift ID " + params[:value])
     staffing = Staffing.create(:shift => shift, :user => user, :date => date, :team => team)
   else   
     old_shift = Shift.find_by(:abbrev => params[:old_value]) || raise(ActiveRecord::RecordNotFound)
@@ -254,24 +327,36 @@ get "/:organization/teams" do
   slim :teams
 end
 
-get "/:organization/users" do
+
+get "/:organization/employments" do
   @user = current_user
   @organization = Organization.mine(@user).find(params[:organization])
-  @users = @organization.users
-  slim :users
+  @is_manager = @organization.is_manager(@user)
+  @employments = @organization.employments.includes(:user).order('users.firstname')
+  slim :employments
 end
 
-post "/:organization/users" do
+get "/:organization/employments/invite" do
   @user = current_user
   @organization = Organization.mine(@user).find(params[:organization])
-  @team = @organization.teams.find(params[:team_id])
-  redirect request.referer
+  halt(403) unless @organization.is_manager(@user)
+  @params = params
+  @params[:level] = 100
+  @params[:role] = Employment::EMPLOYEE
+  slim :employments_invite
 end
 
-delete "/:organization/users/:id" do
+post "/:organization/employments" do
   @user = current_user
-  @organization = Organization.mine(@user).find(params[:organization])
-  User.find(params[:id]).update(:employed_until => Time.now)
+  @organization = Organization.managed_by(@user).find(params[:organization])
+  @organization.employments.create role: params[:role], user_id: params[:user_id], level: params[:level].to_f / 100.0
+  redirect url("/#{@organization.id}/employments")
+end
+
+delete "/:organization/employments/:id" do
+  @user = current_user
+  @organization = Organization.managed_by(@user).find(params[:organization])
+  @organization.employments.find(params[:id]).destroy
   redirect request.referer
 end
 
@@ -283,17 +368,16 @@ get "/:organization/teams/:id" do
 end
 
 post "/:organization/team_members" do
-  @user = current_user
-  @organization = Organization.mine(@user).find(params[:organization])
-  @team = @organization.teams.find(params[:team_id])
-  user = User.find(params[:user_id])
-  @team.team_members.create user: user
+  team = Team.find(params[:team_id])
+  halt(403) unless team.is_owned_by?(current_user)
+  employment = Organization.find(params[:organization]).employments.find(params[:employment_id])
+  team.team_members.create employment: employment, role: params[:role]
   redirect request.referer
 end
 
 delete "/:organization/team_members/:id" do
-  @user = current_user
-  @organization = Organization.mine(@user).find(params[:organization])
-  TeamMember.find(params[:id]).destroy
+  team_member = TeamMember.find(params[:id])
+  halt(403) unless team_member.team.is_owned_by?(current_user)
+  team_member.destroy
   redirect request.referer
 end

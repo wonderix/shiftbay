@@ -8,31 +8,22 @@ class Setup < ActiveRecord::Migration
       t.string  :lastname
       t.string  :email
       t.string  :phone
-      t.string  :password
+      t.string  :password_hash
       t.string  :mobile
-      t.decimal :level_of_employment
       t.string  :job_title
       t.belongs_to :qualification
-      t.belongs_to :organization
       t.binary    :picture
-      t.date    :employed_since
-      t.date    :employed_until
-   end
+    end
     
+    create_table :employments do |t|
+      t.belongs_to :user, index: true
+      t.belongs_to :organization, index: true
+      t.integer    :role
+      t.decimal    :level
+   end
     
     create_table :organizations do |t|
       t.string     :name
-    end
-
-    create_table :groups do |t|
-      t.string     :name
-      t.integer    :role
-      t.belongs_to :organization
-    end
-
-   create_table :group_members do |t|
-      t.belongs_to :user, index: true
-      t.belongs_to :group, index: true
     end
 
     create_table :teams do |t|
@@ -41,8 +32,9 @@ class Setup < ActiveRecord::Migration
     end
 
     create_table :team_members do |t|
-      t.belongs_to :user, index: true
+      t.belongs_to :employment, index: true
       t.belongs_to :team, index: true
+      t.integer    :role
     end
  
     create_table :qualifications do |t|

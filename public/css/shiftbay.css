@@ -17,7 +17,7 @@ body {
   height: 70px;
   text-align: right;
   padding: 5px;
-  min-width: 800px;
+  min-width: 1000px;
 }
 
 .status a{
@@ -103,19 +103,57 @@ table.legend {
   color: black;
 }
 
-.team-member-head form {
-  float: right;
+.field {
+  background-color: white;
+  padding: 5px;
+  clear: both;    
 }
 
-.team-member-list {
+.label {
+  font-weight: bold;
+  color: gray;
+}
+
+.input {
+  
+}
+
+.actions {
+}
+
+.field .detail {
+  font-size: 70%;
+}
+
+.overview-head .content {
+  clear: both;  
+}
+
+.overview-head .action {
+  float: right;
+}
+.overview-head .content {
+  display: inline-block;
+}
+
+.overview-list {
   list-style: none;
   padding-left:0;
 }
-.team-member-list li {
+.overview-list li {
+  background-color: white;
+  border: solid 1px lightgray;
+  padding: 5px;
   clear: both;  
 }
-.team-member-list form {
+.overview-list .content {
+  display: inline-block;
+}
+.overview-list .action {
   float: right;  
+}
+.detail {
+  font-size: 80%;  
 }
 
 .gnatt table {

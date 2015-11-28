@@ -1,0 +1,24 @@
+
+form action=url("/#{@organization.id}/employments") method='POST'
+  .field
+    .label User
+    .input 
+      = User.find(@params[:user_id]).name
+      input type='hidden' name='user_id' value=@params[:user_id]
+    .detail Name of user
+  .field
+    .label Level of Employment
+    .input
+      input name='level' size=3 value=@params[:level]
+      = '%'
+    .detail Enter level of employment
+  .field
+    .label Role
+    .input
+      select name='role' 
+        - Employment.roles.each do | role |
+          option value=role.id =role.name
+    .detail Enter Role
+  .actions
+    button type='submit' Invite
+        

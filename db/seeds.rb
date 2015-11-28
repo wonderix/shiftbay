@@ -9,8 +9,6 @@ def time_range(value)
 end
 
 org = Organization.create(name: "Sonnenhof")
-owners = Group.create(organization: org, name: "Owners" , role: Group::OWNER )
-members = Group.create(organization: org, name: "Members" , role: Group::MEMBER )
 
 shifts = []
 CSV.read(File.join(File.dirname(__FILE__),"shift.csv"),col_sep: ";", encoding: "utf-8").each do | row |
@@ -25,16 +23,15 @@ helper = Qualification.create :name => "Helfer"
 CSV.read(File.join(File.dirname(__FILE__),"users.csv"),col_sep: ";", encoding: "utf-8").each do | row |
   firstname, lastname = row[0].strip.split(/\s+/)
   lastname = lastname.join(" ") if lastname.is_a?(Array)
-  user = User.create :firstname => firstname, :lastname => lastname, :email => "#{firstname}.#{lastname}@sonnenhof.de", :level_of_employment => row[1].to_f/100, :job_title => row[2], :qualification => ( row[2] =~ /ex/ ? ex :helper), :organization => org
+  user = User.create :firstname => firstname, :lastname => lastname, :email => "#{firstname}.#{lastname}@sonnenhof.de", :job_title => row[2], :qualification => ( row[2] =~ /ex/ ? ex : helper), password_hash: BCrypt::Password.create("initial")
+  employment = org.employments.create(user: user, role: ( user.lastname == "Kramer" ? Employment::MANAGER : Employment::EMPLOYEE ), :level => row[1].to_f/100)
   row[3..-1].each do | i |
     next unless i 
     i.strip!
     next if i.empty?
     team = Team.where(:name => i , organization: org).first_or_create
-    TeamMember.create team: team, user: user 
+    TeamMember.create team: team, employment: employment, role: ( user.lastname == "Kramer" ? ( TeamMember::OWNER | TeamMember::PLANNER ):  TeamMember::MEMBER )
   end
-  
-  GroupMember.create(group: owners, user: user) if user.lastname == "Kramer"
-    
+      
 end
 
