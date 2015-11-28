@@ -51,7 +51,7 @@ class StaffingRow
 end
 
 class Plan
-  attr_reader :range, :working_hours
+  attr_reader :range, :working_hours, :read_only
   TIME_SLOT = 1800
   TIME_SLOT_RANGE = (0*3600/TIME_SLOT)...(24*3600/TIME_SLOT)
 

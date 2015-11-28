@@ -1,0 +1,43 @@
+
+h3 = @user.email
+.field
+  .label Firstname
+  .input= @user.firstname
+.field
+  .label Lastname
+  .input= @user.lastname
+.field
+  .label Job Title
+  .input=@user.job_title
+  .detail Enter your job title
+.field
+  .label Qualification
+  .input=@user.qualification.name
+  
+h3 Change Password
+form action="#{url("/users/me/password")}" method='POST'
+  .field
+    .label Old Password
+    .input
+      input name='password_old' type='password' size=50
+    .detail Enter old password
+  .field
+    .label New Password
+    .input
+      input name='password' type='password' 
+    .detail Enter new password
+  .field
+    .label Confirm Password
+    .input
+      input name='password_confirm' type='password' size=50 
+    .detail Please confirm your password
+    .actions
+      button type='submit' Change password
+      
+h3 Calendar
+
+.field
+  .label URL for the calendar
+  .input
+    a href=url("/users/#{@user.token}/calendar") =url("/users/#{@user.token}/calendar") 
+        

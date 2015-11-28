@@ -25,6 +25,10 @@ body {
   color : white;
 }
 
+.exception {
+  color: red;
+}
+
 .logo .title {
   font-size: 32pt
 }

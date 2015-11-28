@@ -1,14 +1,17 @@
 require 'rubygems'
 require 'sinatra'
+require 'sinatra/streaming'
 require 'slim'
 require 'sinatra/activerecord'
 require 'time'
+require 'date'
 require 'json'
 require 'pdfkit'
 require_relative 'gnatt.rb'
 require_relative 'plan.rb'
 require 'bcrypt'
 require 'ostruct'
+require 'securerandom'
 
 class User <ActiveRecord::Base
   include BCrypt
@@ -21,6 +24,10 @@ class User <ActiveRecord::Base
     self.firstname + " " + self.lastname
   end
 
+  before_save :default_values
+  def default_values
+    self.token ||= SecureRandom.hex
+  end
   def password
     @password ||= Password.new(password_hash)
   end
@@ -146,6 +153,10 @@ ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 load File.join(ROOT,"db/seeds.rb") if Organization.count == 0
 
+after do
+  ActiveRecord::Base.connection.close
+end
+
 before do
   content_type :html, 'charset' => 'utf-8'
 end
@@ -175,10 +186,9 @@ helpers do
     @plans = []
     @range = Plan.range(params[:date])
     @organization.teams.order(:name).each do | team |
-      puts team.name
       plan = Plan.new(@range)
       team.employments.includes(:user).each { | employment | plan.add_employment(employment)}
-      @plans << OpenStruct.new(team: team, plan: plan, writable:  true)
+      @plans << OpenStruct.new(team: team, plan: plan, writable:  (!print && team.is_owned_by?(@user)))
       Staffing.includes(:user,:shift).where(date: plan.range, team: team).each do | staffing |
         plan.add(staffing.date,staffing.shift,staffing.user)
       end
@@ -207,14 +217,55 @@ get "/about" do
   slim :about
 end
 
-get "/user/info" do
-  slim :user_info, :layout => false
+get "/users/me" do
+  @user = current_user
+  slim :user
+end
+
+post "/users/me/password" do
+  @user = current_user
+  password_old = params[:password_old]
+  password = params[:password]
+  password_confirm = params[:password_confirm]
+  p password_old
+  p password
+  p password_confirm
+  raise "Invalid old password" unless @user.password == password_old 
+  raise "Password doesn't match" unless password == password_confirm
+  @user.password = password
+  @user.save
+  redirect request.referer
 end
 
 get "/users" do
   @user = current_user
   @users = User.all
   slim :users
+end
+
+get "/users/:token/calendar" do
+  user = User.where(:token => params[:token]).first
+  content_type "text/calendar"
+  stream do |out|
+    out.puts "BEGIN:VCALENDAR"
+    out.puts "VERSION:2.0"
+    out.puts "METHOD:PUBLISH"
+    user.staffings.order(:date).includes(:shift).where("date > ?",Date.today.prev_month).each do | staffing |
+      t0 = Time.new(staffing.date.year,staffing.date.month, staffing.date.day)
+      [ [ staffing.shift.from1, staffing.shift.to1 , 0] , [ staffing.shift.from2, staffing.shift.to2, 1 ] ].each do | t |
+        if t[0]
+          out.puts "BEGIN:VEVENT"
+          out.puts "UID:#{staffing.id}/#{t[2]}"
+          out.puts "DESCRIPTION:#{staffing.shift.abbrev}"
+          out.puts "DTSTART:#{(t0 + t[0]).strftime("%Y%m%dT%H%M%S")}"
+          out.puts "DTEND:#{(t0 + t[1]).strftime("%Y%m%dT%H%M%S")}"
+          out.puts "DTSTAMP:#{(t0 + t[0]).strftime("%Y%m%dT%H%M%S")}"
+          out.puts "END:VEVENT"
+        end
+      end
+    end
+    out.puts "END:VCALENDAR"
+  end
 end
 
 get "/signup" do
@@ -227,6 +278,7 @@ post "/signup" do
     password = params.delete('password')
     password_confirm = params.delete('password_confirm')
     raise "Password doesn't match" if password != password_confirm
+    raise "User already exists" if User.where(:email => params[:email]).first
     user = User.new(params)
     user.password = password
     user.save
@@ -323,7 +375,7 @@ end
 get "/:organization/teams" do
   @user = current_user
   @organization = Organization.mine(@user).find(params[:organization])
-  @teams = @organization.teams
+  @teams = @organization.teams.order(:name)
   slim :teams
 end
 
@@ -356,7 +408,9 @@ end
 delete "/:organization/employments/:id" do
   @user = current_user
   @organization = Organization.managed_by(@user).find(params[:organization])
-  @organization.employments.find(params[:id]).destroy
+  employment = @organization.employments.find(params[:id])
+  TeamMember.where(:employment => employment).destroy
+  employment.destroy
   redirect request.referer
 end
 

@@ -70,7 +70,7 @@ p
       h4 Legende
       table.legend
         tr
-        - 8.times do 
+        - 4.times do 
           th.weekend 
           th von
           th bis
@@ -81,7 +81,7 @@ p
         - shifts = @organization.shifts.order(:abbrev).to_a
         - while ! shifts.empty?
           tr
-            - shifts.shift(8).each do | shift |
+            - shifts.shift(4).each do | shift |
               th.weekend= shift.abbrev
               td= shift.from1 ? (time + shift.from1).strftime("%H:%M") : ""
               td= shift.to1 ? (time + shift.to1).strftime("%H:%M") : ""
