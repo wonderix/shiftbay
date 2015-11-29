@@ -36,8 +36,16 @@ form action="#{url("/users/me/password")}" method='POST'
       
 h3 Calendar
 
-.field
-  .label URL for the calendar
-  .input
-    a href=url("/users/#{@user.token}/calendar") =url("/users/#{@user.token}/calendar") 
+- calendar = Calendar.where(:user => @user).first
+- if calendar
+  .field
+    .label URL for the calendar
+    .input
+      a href=url("/calendars/#{calendar.token}") =url("/calendars/#{calendar.token}")
+- else
+  .field
+    .label Create public available calendar
+    .input
+      form action=url("/calendars") method="POST"
+        button type='submit' Create
         

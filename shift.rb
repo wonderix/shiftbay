@@ -24,10 +24,6 @@ class User <ActiveRecord::Base
     self.firstname + " " + self.lastname
   end
 
-  before_save :default_values
-  def default_values
-    self.token ||= SecureRandom.hex
-  end
   def password
     @password ||= Password.new(password_hash)
   end
@@ -35,6 +31,14 @@ class User <ActiveRecord::Base
   def password=(new_password)
     @password = Password.create(new_password)
     self.password_hash = @password
+  end
+end
+
+class Calendar < ActiveRecord::Base
+  belongs_to :user
+  before_save :default_values
+  def default_values
+    self.token ||= SecureRandom.hex
   end
 end
 
@@ -243,20 +247,21 @@ get "/users" do
   slim :users
 end
 
-get "/users/:token/calendar" do
-  user = User.where(:token => params[:token]).first
+get "/calendars/:token" do
+  user = Calendar.where(:token => params[:token]).first.user
   content_type "text/calendar"
+  headers "content-disposition" => "inline; filename=Schicht.ics"
   stream do |out|
     out.puts "BEGIN:VCALENDAR"
     out.puts "VERSION:2.0"
     out.puts "METHOD:PUBLISH"
-    user.staffings.order(:date).includes(:shift).where("date > ?",Date.today.prev_month).each do | staffing |
+    user.staffings.order(:date).includes(:shift, team: :organization).where("date > ?",Date.today.prev_month).each do | staffing |
       t0 = Time.new(staffing.date.year,staffing.date.month, staffing.date.day)
       [ [ staffing.shift.from1, staffing.shift.to1 , 0] , [ staffing.shift.from2, staffing.shift.to2, 1 ] ].each do | t |
         if t[0]
           out.puts "BEGIN:VEVENT"
           out.puts "UID:#{staffing.id}/#{t[2]}"
-          out.puts "DESCRIPTION:#{staffing.shift.abbrev}"
+          out.puts "SUMMARY:#{staffing.team.organization.name} #{staffing.team.name}: #{staffing.shift.abbrev} "
           out.puts "DTSTART:#{(t0 + t[0]).strftime("%Y%m%dT%H%M%S")}"
           out.puts "DTEND:#{(t0 + t[1]).strftime("%Y%m%dT%H%M%S")}"
           out.puts "DTSTAMP:#{(t0 + t[0]).strftime("%Y%m%dT%H%M%S")}"
@@ -266,6 +271,12 @@ get "/users/:token/calendar" do
     end
     out.puts "END:VCALENDAR"
   end
+end
+
+post "/calendars" do
+  user = current_user
+  calendar = Calendar.where(:user => user).first || Calendar.create(:user => user)
+  redirect request.referer
 end
 
 get "/signup" do

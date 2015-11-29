@@ -11,9 +11,13 @@ class Setup < ActiveRecord::Migration
       t.string  :password_hash
       t.string  :mobile
       t.string  :job_title
-      t.string  :token, index: true
       t.belongs_to :qualification
       t.binary    :picture
+    end
+    
+    create_table :calendars do |t|
+      t.string  :token, index: true
+      t.belongs_to :user
     end
     
     create_table :employments do |t|
