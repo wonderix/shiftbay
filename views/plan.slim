@@ -6,6 +6,7 @@
   button.nav onClick="location.href='#{plan_url}?date=' + escape('#{date.prev_month}')" <
   button.nav onClick="location.href='#{plan_url}?date=' + escape('#{date.next_month}')" >
   button.nav onClick="location.href='#{plan_url}?date=' + escape('#{Date.today}')" Heute
+  button.nav onClick="location.href='#{plan_url}?date=' + escape('#{date}') + '&group=employee'" Nach Angestellten
   button.nav onClick="location.href='#{plan_url}.pdf?date=' + escape('#{date}')" Drucken
 
 p
@@ -13,7 +14,7 @@ p
   - @plans.each do | plan_entry |
     table
       - plan = plan_entry.plan
-      - team = plan_entry.team
+      - team = plan.team
       tr
         td 
           h3 #{team.name} 
@@ -28,19 +29,22 @@ p
         th Soll
       - plan.each_row do |row|
         tr
-          td.username= row.user.name
+          -if plan.team != row.team
+            td.username #{row.user.name} (#{row.team.name})
+          - else
+            td.username= row.user.name
           - row.each do |entry,t|
             -case entry
             -when Shift
               td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
                 -if plan_entry.writable
-                  input name="test" value=entry.abbrev size=2 onchange="staffing(this,'#{entry.abbrev}','#{t}',#{row.user.id},#{team.id})"
+                  input name="test" value=entry.abbrev size=2 onchange="staffing(this,'#{entry.abbrev}','#{t}',#{row.user.id},#{row.team.id})"
                 -else 
                   = entry.abbrev
             -else
               td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
                 -if plan_entry.writable
-                  input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id},#{team.id})"
+                  input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id},#{row.team.id})"
           td= row.working_hours
           td= ("%5.1f" % (plan.working_hours*row.level_of_employment))
         - if @print

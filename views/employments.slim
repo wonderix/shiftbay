@@ -2,7 +2,7 @@
   .content
     h3 Employees of #{@organization.name}
   .action
-    - if @is_manager
+    - if @is_managed_by
       form action=url("/#{@organization.id}/employments/invite") method="GET"
         select name="user_id" 
           - User.all.where.not(:id => @organization.users.map{ | u | u.id }).order(:firstname).each do |user|
@@ -12,7 +12,7 @@ ul.overview-list
   - @employments.each do |employment|
     li
       .action
-        - if @is_manager
+        - if @is_managed_by
           form action=url("/#{@organization.id}/employments/#{employment.id}") method="POST"
             input type="hidden" name="_method" value="delete"
             button Delete

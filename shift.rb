@@ -76,7 +76,7 @@ class Organization <ActiveRecord::Base
   def teams_owned_by(user)
     self.teams.includes(team_members: {team_members: :employment}).where(team_members: { employment: {user_id: user.id}, role: TeamMember::OWNER})
   end
-  def is_manager(user)
+  def is_managed_by?(user)
     self.employments.where( employments: {user_id: user.id, role: Employment::MANAGER}).count > 0
   end
 end
@@ -88,7 +88,7 @@ class Team <ActiveRecord::Base
   belongs_to :organization
   def is_owned_by?(user)
     self.team_members.includes(:employment).where( employments: {user_id: user.id}, role: TeamMember::OWNER).count > 0 ||
-      self.organization.is_manager(user)
+      self.organization.is_managed_by?(user)
   end
 end
 
@@ -184,17 +184,28 @@ helpers do
   	slim :calendar, :layout => false
   end
   
-  def get_plan(print = false)
+  def get_plan(print = false, group_by_employee = false)
     @user = current_user
     @organization = Organization.mine(@user).find(params[:organization])
     @plans = []
     @range = Plan.range(params[:date])
-    @organization.teams.order(:name).each do | team |
-      plan = Plan.new(@range)
-      team.employments.includes(:user).each { | employment | plan.add_employment(employment)}
-      @plans << OpenStruct.new(team: team, plan: plan, writable:  (!print && team.is_owned_by?(@user)))
-      Staffing.includes(:user,:shift).where(date: plan.range, team: team).each do | staffing |
-        plan.add(staffing.date,staffing.shift,staffing.user)
+    if group_by_employee
+      plan = Plan.new(@range,@organization)
+      @organization.teams.order(:name).each do | team |
+        team.employments.includes(:user).each { | employment | plan.add_employment(employment,team)}
+      end
+      @plans << OpenStruct.new(plan: plan, writable:  (!print && @organization.is_managed_by?(@user)))
+      Staffing.includes(:user,:shift).where(date: plan.range).each do | staffing |
+        plan.add(staffing)
+      end
+    else
+      @organization.teams.order(:name).each do | team |
+        plan = Plan.new(@range,team)
+        team.employments.includes(:user).each { | employment | plan.add_employment(employment,team)}
+        @plans << OpenStruct.new(plan: plan, writable:  (!print && team.is_owned_by?(@user)))
+        Staffing.includes(:user,:shift).where(date: plan.range, team: team).each do | staffing |
+          plan.add(staffing)
+        end
       end
     end
     @print = print
@@ -348,11 +359,11 @@ post "/:organization/staffing" do
 end
 
 get "/:organization/plan" do
-  get_plan
+  get_plan(false,params[:group] == "employee")
 end
 
 get "/:organization/plan.pdf" do
-  html = get_plan(true)
+  html = get_plan(true,false)
   headers[ 'content-type'] = 'application/pdf'
   # headers[ 'content-disposition'] = "attachment; filename=plan.pdf"
   kit = PDFKit.new(html)
@@ -394,7 +405,7 @@ end
 get "/:organization/employments" do
   @user = current_user
   @organization = Organization.mine(@user).find(params[:organization])
-  @is_manager = @organization.is_manager(@user)
+  @is_managed_by = @organization.is_managed_by?(@user)
   @employments = @organization.employments.includes(:user).order('users.firstname')
   slim :employments
 end
@@ -402,7 +413,7 @@ end
 get "/:organization/employments/invite" do
   @user = current_user
   @organization = Organization.mine(@user).find(params[:organization])
-  halt(403) unless @organization.is_manager(@user)
+  halt(403) unless @organization.is_managed_by?(@user)
   @params = params
   @params[:level] = 100
   @params[:role] = Employment::EMPLOYEE

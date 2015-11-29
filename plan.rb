@@ -1,9 +1,10 @@
 require 'time'
 
 class PlanRow
-  attr_reader :user, :working_hours, :level_of_employment
-  def initialize(user,range,level_of_employment)
+  attr_reader :user, :working_hours, :level_of_employment, :team
+  def initialize(user,team,range,level_of_employment)
     @user = user
+    @team = team
     @range = range
     @level_of_employment = level_of_employment
     @data = Array.new(range.last-range.first)
@@ -51,14 +52,15 @@ class StaffingRow
 end
 
 class Plan
-  attr_reader :range, :working_hours, :read_only
+  attr_reader :range, :working_hours, :read_only, :team
   TIME_SLOT = 1800
   TIME_SLOT_RANGE = (0*3600/TIME_SLOT)...(24*3600/TIME_SLOT)
 
-  def initialize(range)
+  def initialize(range,team)
     @range = range
     @table = []
     @rows = {}
+    @team = team
     @time_rows = Array.new(24*3600/TIME_SLOT)
     @working_hours = 0
     @range.each { | date| @working_hours += 40.0/6.0 unless date.sunday? }
@@ -89,17 +91,22 @@ class Plan
     end
   end
   
-  def add_employment(employment)
-    add_user(employment.user,employment.level)
+  def add_employment(employment, team = nil)
+    add_user(employment.user,employment.level,team)
   end
 
-  def add_user(user,level_of_employment = 0.0)
-    index = @rows[user.id] ||= @table.length
-    row = @table[index] ||=  PlanRow.new(user,@range,level_of_employment)
+  def add_user(user,level_of_employment,team)
+    team ||= @team
+    id = "#{team.id}:#{user.id}"
+    index = @rows[id] ||= @table.length
+    row = @table[index] ||=  PlanRow.new(user,team,@range,level_of_employment)
   end
   
-  def add(date,shift,user)
-    row = add_user(user)
+  def add(staffing)
+    date = staffing.date
+    shift = staffing.shift
+    user = staffing.user
+    row = add_user(user,0.0,staffing.team)
     [ [shift.from1,shift.to1 ] , [shift.from2,shift.to2 ] ].each do | from, to |
       next unless from
       first = [ from/TIME_SLOT, TIME_SLOT_RANGE.first].max
@@ -113,7 +120,7 @@ class Plan
   end
   
   def each_row(&block)
-    @table.sort!{ | x , y | x.user.firstname <=> y.user.firstname }
+    @table.sort!{ | x , y | result = x.user.firstname <=> y.user.firstname; result == 0 ? x.team.name <=> y.team.name : result }
     @table.each &block
   end
 
