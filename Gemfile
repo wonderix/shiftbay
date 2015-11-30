@@ -8,4 +8,4 @@ gem "sinatra-contrib"
 gem "pdfkit"
 gem "wkhtmltopdf-binary"
 gem "bcrypt"
-
+gem "sqlite3"
