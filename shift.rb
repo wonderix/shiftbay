@@ -151,9 +151,9 @@ set :database, DB
 set :session_secret, "sRfBLNNJ0F/gaWpmjXasda0WKw5Q="
 use Rack::MethodOverride
 
+ActiveRecord::Base.logger = Logger.new(STDOUT)
 ActiveRecord::Base.logger.level = 3
 ActiveRecord::Migrator.migrate(File.join(ROOT,"db/migrate"), nil)
-ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 load File.join(ROOT,"db/seeds.rb") if Organization.count == 0
 
