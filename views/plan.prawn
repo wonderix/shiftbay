@@ -1,13 +1,16 @@
 
-@plans.each do | plan_entry |
-  plan = plan_entry.plan
+for i in 0...@plans.length
+  pdf.start_new_page if i > 0
+  plan = @plans[i].plan
   team = plan.team
   pdf.text plan.team.name
 
+  weekend = []
   data = []
   r = []
   r << ""
   plan.each_header do |t|
+    weekend << r.length if t.sunday? || t.saturday?
     r << "#{t.strftime("%d")}"
   end 
   r << "Ist"
@@ -24,9 +27,9 @@
     row.each do |entry,t|
       case entry
       when Shift
-        r << Prawn::Table::Cell.make(pdf, entry.abbrev)
+        r << entry.abbrev
       else
-        r << Prawn::Table::Cell.make(pdf, "")
+        r << ""
       end
     end
     r << ("%5.1f" % row.working_hours)
@@ -49,15 +52,17 @@
     r << ""
     data << r
   end
-  pdf.table(data, :header => true, :font_size => 7, :border_width => 0.1 , 
-     :cell_style => { }, 
-     :border_color => "AAAAAA", 
-     :padding => 2,
-     :row_colors => ["FFFFFF", "E0E0E0",  "F0F0F0"]) do
-      cells.style(:width => 24, :height => 24)
+  pdf.table(data, :header => true, 
+    :cell_style => { 
+      :overflow => :shrink_to_fit, 
+      :size => 8,
+      :border_width => 1, 
+      :border_color => "808080",  
+      :padding => [2, 2, 2, 2] 
+    }) do
       cells.style do |c|
-        c.background_color = ((c.row + c.column) % 2).zero? ? '000000' : 'ffffff'
+        we = weekend.include?(c.column)
+        c.background_color = "%06x" % (0xffffff - (c.row % 3 == 1 ? 0x202020 : 0 ) - ( we ? 0x202020 : 0 ))
       end
   end
-  pdf.start_new_page
 end
