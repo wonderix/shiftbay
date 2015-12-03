@@ -6,12 +6,14 @@ require 'sinatra/activerecord'
 require 'time'
 require 'date'
 require 'json'
-require 'pdfkit'
 require_relative 'gnatt.rb'
 require_relative 'plan.rb'
 require 'bcrypt'
 require 'ostruct'
 require 'securerandom'
+require 'prawn'
+require 'prawn/table'
+require 'sinatra/prawn'
 
 class User <ActiveRecord::Base
   include BCrypt
@@ -130,17 +132,6 @@ class Staffing <ActiveRecord::Base
 end
 
 
-PDFKit.configure do |config|
-  config.default_options = {
-    :page_size => 'A4',
-    :print_media_type => true
-  }
-  # Use only if your external hostname is unavailable on the server.
-  config.root_url = "http://localhost"
-  config.verbose = true
-end
-
-
 register Sinatra::ActiveRecordExtension
 
 ROOT = File.dirname(File.expand_path(__FILE__))
@@ -149,6 +140,8 @@ enable :sessions
 set :bind, '0.0.0.0'
 set :database, DB
 set :session_secret, "sRfBLNNJ0F/gaWpmjXasda0WKw5Q="
+set :prawn, { :page_layout => :landscape }
+
 use Rack::MethodOverride
 
 ActiveRecord::Base.logger = Logger.new(STDOUT)
@@ -184,7 +177,7 @@ helpers do
   	slim :calendar, :layout => false
   end
   
-  def get_plan(print = false, group_by_employee = false)
+  def get_plan(group_by_employee = false)
     @user = current_user
     @organization = Organization.mine(@user).find(params[:organization])
     @plans = []
@@ -194,7 +187,7 @@ helpers do
       @organization.teams.order(:name).each do | team |
         team.employments.includes(:user).each { | employment | plan.add_employment(employment,team)}
       end
-      @plans << OpenStruct.new(plan: plan, writable:  (!print && @organization.is_managed_by?(@user)))
+      @plans << OpenStruct.new(plan: plan, writable:  (@organization.is_managed_by?(@user)))
       Staffing.includes(:user,:shift).where(date: plan.range).each do | staffing |
         plan.add(staffing)
       end
@@ -202,14 +195,12 @@ helpers do
       @organization.teams.order(:name).each do | team |
         plan = Plan.new(@range,team)
         team.employments.includes(:user).each { | employment | plan.add_employment(employment,team)}
-        @plans << OpenStruct.new(plan: plan, writable:  (!print && team.is_owned_by?(@user)))
+        @plans << OpenStruct.new(plan: plan, writable:  (team.is_owned_by?(@user)))
         Staffing.includes(:user,:shift).where(date: plan.range, team: team).each do | staffing |
           plan.add(staffing)
         end
       end
     end
-    @print = print
-    slim :plan, layout: ( print ? :layout_pdf : :layout)
   end
 end
 
@@ -359,15 +350,14 @@ post "/:organization/staffing" do
 end
 
 get "/:organization/plan" do
-  get_plan(false,params[:group] == "employee")
+  get_plan(params[:group] == "employee")
+  slim :plan
 end
 
 get "/:organization/plan.pdf" do
-  html = get_plan(true,false)
+  html = get_plan(params[:group] == "employee")
   headers[ 'content-type'] = 'application/pdf'
-  # headers[ 'content-disposition'] = "attachment; filename=plan.pdf"
-  kit = PDFKit.new(html)
-  kit.to_pdf
+  prawn :plan
 end
 
 get "/:organization/gnatt" do
