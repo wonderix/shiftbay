@@ -4,6 +4,7 @@ for i in 0...@plans.length
   plan = @plans[i].plan
   team = plan.team
   pdf.text plan.team.name
+  pdf.text @range.first.to_s, size: 10
 
   weekend = []
   data = []
@@ -52,17 +53,53 @@ for i in 0...@plans.length
     r << ""
     data << r
   end
-  pdf.table(data, :header => true, 
+  options = {
+    :header => true, 
     :cell_style => { 
       :overflow => :shrink_to_fit, 
       :size => 8,
       :border_width => 1, 
       :border_color => "808080",  
       :padding => [2, 2, 2, 2] 
-    }) do
-      cells.style do |c|
-        we = weekend.include?(c.column)
-        c.background_color = "%06x" % (0xffffff - (c.row % 3 == 1 ? 0x202020 : 0 ) - ( we ? 0x202020 : 0 ))
-      end
+    }
+    
+  }
+  pdf.table(data,options)  do
+    cells.style do |c|
+      we = weekend.include?(c.column)
+      c.background_color = "%06x" % (0xffffff - (c.row % 3 == 1 ? 0x202020 : 0 ) - ( we ? 0x202020 : 0 ))
+    end
   end
+  pdf.move_down(30)
+  pdf.text "Legende", :size => 10
+
+  data = []
+  r = []
+  cols = 3
+  cols.times do 
+    r += [ "" , "von" , "bis" , "von", "bis", "Beschreibung"]
+  end
+  data << r
+  r = []
+  time = Time.local(2000,1,1,0,0,0)
+  shifts = @organization.shifts.order(:abbrev).to_a
+  while ! shifts.empty?
+    r = []
+    shifts.shift(cols).each do | shift |
+      r << shift.abbrev
+      r << (shift.from1 ? (time + shift.from1).strftime("%H:%M") : "")
+      r << (shift.to1 ? (time + shift.to1).strftime("%H:%M") : "")
+      r << (shift.from2 ? (time + shift.from2).strftime("%H:%M") : "")
+      r << (shift.to2 ? (time + shift.to2).strftime("%H:%M") : "")
+      r << shift.description
+    end
+    data << r
+  end
+  options[:cell_style][:size] = 6
+  pdf.table(data,options)  do
+    cells.style do |c|
+      c.background_color = "%06x" % ( c.column % 6 == 0 ? 0xdfdfdf : 0xffffff ) 
+    end
+  end
+
 end

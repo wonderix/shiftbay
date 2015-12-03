@@ -140,7 +140,6 @@ enable :sessions
 set :bind, '0.0.0.0'
 set :database, DB
 set :session_secret, "sRfBLNNJ0F/gaWpmjXasda0WKw5Q="
-set :prawn, { :page_layout => :landscape }
 
 use Rack::MethodOverride
 
