@@ -2,6 +2,47 @@
 - gnatt_url = url("/#{@organization.id}/gnatt")
 - staffing_url = url("/#{@organization.id}/staffing")
 - date = @range.first
+
+javascript:
+  var buffer = [];
+  var sending = false;
+  function staffing(input,t,user_id,team_id) {
+    var shift = input.value;
+    var old_shift = input.old_value || '';
+    buffer.push({ shift: shift, old_shift: old_shift, date: t, user: user_id, team: team_id});
+    send();
+  }
+  function send() {
+    if ( sending ) return;
+    sending = true;
+    var data = buffer;
+    buffer = [];
+    $.ajax({
+      url: '#{staffing_url}',
+      method: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify(data)
+    }).done(function() {
+      sending = false;
+      if ( buffer.size > 0 ) send();
+    }).fail(function(jqXHR, textStatus, errorThrown) {
+      buffer = data.concat(buffer);
+      alert(errorThrown);
+    });
+  }
+  var source = new EventSource("#{staffing_url}?date=#{date}");
+  source.addEventListener('staffing',function(event) {
+    var data = JSON.parse(event.data);
+    for (let index = 0; index < data.length; ++index) {
+      var s = data[index];
+      var x = $("#input_" + s.team + "_" + s.user + "_" + s.offset);
+      x.val(s.shift);
+      if ( s.error ) {
+        x.addClass('error');
+        setTimeout(function() { x.removeClass('error');}, 500)
+      } 
+    }
+  });
 button.nav onClick="location.href='#{plan_url}?date=' + escape('#{date.prev_month}')" <
 button.nav onClick="location.href='#{plan_url}?date=' + escape('#{date.next_month}')" >
 button.nav onClick="location.href='#{plan_url}?date=' + escape('#{Date.today}')" Heute
@@ -33,17 +74,13 @@ p
           - else
             td.username= row.user.name
           - row.each do |entry,t|
-            -case entry
-            -when Shift
-              td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
-                -if plan_entry.writable
-                  input name="test" value=entry.abbrev size=2 onchange="staffing(this,'#{entry.abbrev}','#{t}',#{row.user.id},#{row.team.id})"
-                -else 
-                  = entry.abbrev
-            -else
-              td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
-                -if plan_entry.writable
-                  input name="test" value="" size=2 onchange="staffing(this,'','#{t}',#{row.user.id},#{row.team.id})"
+            td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"
+              -id = "input_#{team.id}_#{row.user.id}_#{(t-date).to_i}"
+              -case entry
+              -when Shift
+                input id=id onfocus="this.old_value = this.value;" name="test" value=entry.abbrev size=2 readonly=!plan_entry.writable onchange="staffing(this,'#{t}',#{row.user.id},#{row.team.id})"
+              -else
+               input id=id onfocus="this.old_value = this.value;" name="test" value="" size=2 readonly=!plan_entry.writable onchange="staffing(this,'#{t}',#{row.user.id},#{row.team.id})"              
           td= row.working_hours
           td= ("%5.1f" % (plan.working_hours*row.level_of_employment))
       tr
@@ -55,16 +92,5 @@ p
             td class="#{(t.sunday? || t.saturday?) ? "weekend" : "" }"= entry
           td
           td
-javascript:
-  function staffing(input,old_value,t,user_id,team_id) {
-    var value = input.value;
-    request = $.ajax({
-      url: '#{staffing_url}',
-      method: 'POST',
-      data: { value: value, old_value: old_value, date: t, user_id: user_id, team_id: team_id}
-    });
-    request.fail(function( jqXHR, textStatus ) {
-      alert(jqXHR.responseText);
-      input.value = old_value;
-    });
-  }
+
+

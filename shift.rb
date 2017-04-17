@@ -14,6 +14,7 @@ require 'securerandom'
 require 'prawn'
 require 'prawn/table'
 require 'sinatra/prawn'
+require "sinatra/sse"
 
 class User <ActiveRecord::Base
   include BCrypt
@@ -131,7 +132,7 @@ class Staffing <ActiveRecord::Base
   belongs_to :user
 end
 
-
+include Sinatra::SSE
 register Sinatra::ActiveRecordExtension
 
 ROOT = File.dirname(File.expand_path(__FILE__))
@@ -324,26 +325,63 @@ get "/" do
   slim :orgs
 end
 
+SSE_STREAMS = {}
+get "/:organization/staffing" do
+  @user = current_user
+  @organization = Organization.mine(@user).find(params[:organization])
+  date = Plan.range(Date.parse(params[:date])).begin
+  key = "#{@organization.id}:#{date}"
+  sse_stream do |out|
+      (SSE_STREAMS[key] ||= []) << out
+  end
+end
 
 post "/:organization/staffing" do 
   @user = current_user
   @organization = Organization.mine(@user).find(params[:organization])
-  user = @organization.users.find(params[:user_id])
-  shift = Shift.find_by(:abbrev => params[:value])
-  team = Team.find(params[:team_id])
-  date = Date.parse(params[:date])
-  staffing = nil
-  if params[:old_value] == ''
-    shift || halt(400, "Invalid shift ID " + params[:value])
-    staffing = Staffing.create(:shift => shift, :user => user, :date => date, :team => team)
-  else   
-    old_shift = Shift.find_by(:abbrev => params[:old_value]) || raise(ActiveRecord::RecordNotFound)
-    staffing = Staffing.find_by(:user => user, :date => date, :shift => old_shift, :team => team) || raise(ActiveRecord::RecordNotFound)
-    if shift
-      staffing.update(:shift => shift)
-    else
-      staffing.destroy()
+  staffings = JSON.parse(request.body.read)
+  data = []
+  start_date = nil
+  staffings.each do | s |
+    s["old_shift"].strip!
+    s["shift"].strip!
+    next if s["old_shift"] == s["shift"]
+    user = @organization.users.find(s["user"])
+    team = Team.find(s["team"])
+    date = Date.parse(s["date"])
+    start_date = Plan.range(date).first unless start_date
+    begin
+      staffing = nil
+      if s["old_shift"] == ''
+        shift = Shift.find_by(:abbrev => s["shift"]) || raise("Invalid shift ID " + s["shift"])
+        staffing = Staffing.create(:shift => shift, :user => user, :date => date, :team => team)
+      else 
+        old_shift = Shift.find_by(:abbrev => s["old_shift"]) || raise("Invalid shift ID " + s["old_shift"])
+        staffing = Staffing.find_by(:user => user, :date => date, :shift => old_shift, :team => team) || raise(ActiveRecord::RecordNotFound)
+        if s["shift"] == ''
+          staffing.destroy()
+        else
+          shift = Shift.find_by(:abbrev => s["shift"]) || raise("Invalid shift ID " + s["shift"])
+          staffing.update(:shift => shift)
+        end
+      end
+      data << {team: team.id, shift: s["shift"], offset: (date - start_date).to_i, user: user.id}
+    rescue Exception => exc
+      data << {team: team.id, shift: s["old_shift"], error: exc.to_s , offset: (date - start_date).to_i, user: user.id}
     end
+  end
+  unless data.empty?
+    key = "#{@organization.id}:#{start_date}"
+    sse_streams = SSE_STREAMS[key] || []
+    dead = []
+    sse_streams.each do | sse_stream |
+      begin
+        sse_stream.push :event => "staffing", :data => data.to_json
+      rescue IOError => exc
+        dead << sse_stream
+      end
+    end
+    dead.each { | s | sse_streams.delete(s) }
   end
   ""
 end

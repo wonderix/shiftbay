@@ -80,6 +80,10 @@ class Plan
     t0 = t0 - ( t0.day - 1)
     return t0...t0.next_month
   end
+    
+  def range()
+    return @range
+  end
   
   def days()
     (0...7).map { |i | @from+i*SECONDS_PER_DAY }
